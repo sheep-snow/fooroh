@@ -3,10 +3,6 @@
 Bot for Bluesky that adds watermarks to posted illustrations and replaces them with reposts.
 The name `fooroh` comes from the Japanese word `封蝋`, which means sealing wax.
 
-# System Design
-
-![](./docs/system-design.drawio.svg)
-
 ## Requirements
 
 Serverless Bluesky bot deployable on AWS via AWS CDK.
@@ -45,5 +41,17 @@ $ npx cdk deploy fooroh-FirehoseStack-dev -c env=dev
 
 ## Design
 
-[Systen Design](docs/system-design.drawio)
+### follow
+![follow](./docs/follow.drawio.svg)
 
+### sign up
+![signup](./docs/signup.drawio.svg)
+
+### set watermark image
+![set-watermark-image](./docs/set-watermark-image.drawio.svg)
+
+### watermarking
+![watermarking](./docs/watermarking.drawio.svg)
+
+### sign out
+![signout](./docs/signout.drawio.svg)
