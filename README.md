@@ -15,19 +15,19 @@ The application part is a Lambda function or ECS service written in python and d
 **local development environment**
 
 * AWS CLI
-* Node.js
-* Python 3.13.x
-* Poetry 2.x
+* Node.js ^18
+* Python ^3.13
+* Poetry ^2
 * Docker Service
-* node
 
 ## quick start
 
 ```bash
 $ npm install
+
+# check
 $ npx cdk bootstrap --profile default
 $ npx cdk synth --profile default -c env=dev --all
-$ npx cdk deploy --profile default -c env=dev --all
 
 # deploy each Stack
 $ npx cdk deploy fooroh-CommonResourceStack-dev -c env=dev
@@ -37,6 +37,9 @@ $ npx cdk deploy fooroh-SetWatermarkImgStack-dev -c env=dev
 $ npx cdk deploy fooroh-WatermarkingFlowStack-dev -c env=dev
 $ npx cdk deploy fooroh-SignoutFlowStack-dev -c env=dev
 $ npx cdk deploy fooroh-FirehoseStack-dev -c env=dev
+
+# deploy all Stacks at once
+$ npx cdk deploy --profile default -c env=dev --all
 ```
 
 ## Design
