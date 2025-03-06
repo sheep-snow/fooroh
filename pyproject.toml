@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "fooroh"
+version = "0.1.0"
+description = "Bot for Bluesky that adds watermarks to posted illustrations and replaces them with reposts."
+authors = ["sheep-snow <71830342+sheep-snow@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.13,<3.14"
+boto3 = "^1.37.6"
+requests = "^2.32.3"
+atproto = "^0.0.59"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.9.9"
+pytest = "^8.3.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

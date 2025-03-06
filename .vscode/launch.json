@@ -1,0 +1,56 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug App",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            // "program": "${workspaceFolder}/src/settings.py",
+            "args": [],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src:${PYTHONPATH}",
+                "SECRET_NAME": "fooroh-secretsmanager-dev",
+                "AWS_REGION": "ap-northeast-1",
+                "USERINFO_BUCKET_NAME": "",
+                "FOLLOWED_QUEUE_URL": "",
+                "STATEMACHINE_ARN": "",
+                "SET_WATERMARK_IMG_QUEUE_URL": "",
+                "WATERMARKS_BUCKET_NAME": "",
+                "CLUSTER_NAME": "",
+                "SERVICE_NAME": "",
+            }
+        },
+        {
+            "name": "Run Test",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "args": [
+                "tests/",
+                "--junit-xml=${workspaceFolder}/.unittest_results.xml"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src:${PYTHONPATH}",
+                "SECRET_NAME": "fooroh-secretsmanager-dev",
+                "AWS_REGION": "ap-northeast-1",
+            }
+        },
+        {
+            "name": "Run Ruff Check",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "ruff",
+            "console": "integratedTerminal",
+            "args": [
+                "check"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src:${PYTHONPATH}",
+                "SECRET_NAME": "fooroh-secretsmanager-dev",
+                "AWS_REGION": "ap-northeast-1",
+            }
+        }
+    ]
+}

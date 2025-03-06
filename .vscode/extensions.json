@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "EditorConfig.EditorConfig",
+        "streetsidesoftware.code-spell-checker",
+        "charliermarsh.ruff",
+        "hediet.vscode-drawio"
+    ]
+}

@@ -1,0 +1,36 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "ruff.organizeImports": true,
+    "ruff.lint.enable": true,
+    "ruff.configurationPreference": "filesystemFirst",
+    "python.languageServer": "Pylance",
+    "editor.formatOnPaste": false,
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/*/**": true,
+        "**/.hg/store/**": true,
+        "**/.venv/**": true
+    },
+    "github.copilot.enable": {
+        "*": true,
+        "properties": false
+    },
+    "ruff.nativeServer": "off",
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit"
+        },
+    },
+    "workbench.colorTheme": "Monokai",
+    "[typescript]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features"
+    }
+}
