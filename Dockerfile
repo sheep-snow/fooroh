@@ -10,6 +10,9 @@ RUN cat /etc/system-release \
     && aws --version
 ENV PYTHONUTF8=1
 
+# install dependencies for pillow
+# RUN dnf install -y gcc openssl-devel bzip2-devel libffi-devel readline-devel sqlite sqlite-devel xz xz-devel zlib-devel
+
 COPY pyproject.toml poetry.toml poetry.lock ${LAMBDA_TASK_ROOT}/
 RUN pip install --upgrade pip \
     && pip install poetry \

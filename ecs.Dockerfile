@@ -15,6 +15,10 @@ RUN cat /etc/system-release \
     && aws --version
 
 ENV PATH="/project/.venv/bin:$PATH"
+
+# install dependencies for pillow
+# RUN yum install -y gcc openssl-devel bzip2-devel libffi-devel readline-devel sqlite sqlite-devel xz xz-devel zlib-devel
+
 COPY pyproject.toml poetry.toml poetry.lock ./
 COPY src/ /project/
 RUN uv python install 3.13 \
