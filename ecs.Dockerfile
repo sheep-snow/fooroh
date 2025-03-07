@@ -1,29 +1,25 @@
-# Firehose listener container
-FROM public.ecr.aws/amazonlinux/amazonlinux:2023
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
+FROM python:3.13-slim
 
+ENV PYTHONUNBUFFERED 1
+ENV PYTHONUTF8=1
 WORKDIR /project
-ENV UV_CACHE_DIR=/tmp/.uv_cache
+ENV PYTHONPATH=/project:${PYTHONPATH}
 
-RUN cat /etc/system-release \
-    && yum update \
-    && yum install -y unzip git \
+RUN apt-get update
+RUN apt-get install unzip curl -y \
     && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install \
-    && aws --version
-
-ENV PATH="/project/.venv/bin:$PATH"
-
-# install dependencies for pillow
-# RUN yum install -y gcc openssl-devel bzip2-devel libffi-devel readline-devel sqlite sqlite-devel xz xz-devel zlib-devel
+    && aws --version \
+    && curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python \
+    && cd /usr/local/bin \
+    && ln -s /opt/poetry/bin/poetry
 
 COPY pyproject.toml poetry.toml poetry.lock ./
-COPY src/ /project/
-RUN uv python install 3.13 \
-    && uvx migrate-to-uv \
-    && uv sync
+RUN pip install --upgrade pip \
+    && poetry config virtualenvs.create false \
+    && poetry install --no-root --only main
 
-ENTRYPOINT [ "uv", "run" ]
+COPY src/ /project/
+ENTRYPOINT [ "poetry", "run" ]
 CMD [ "python", "firehose/listener.py" ]

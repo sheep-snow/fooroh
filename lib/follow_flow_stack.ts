@@ -60,7 +60,11 @@ export class FollowFlowStack extends Stack {
     });
   }
 
-  private createWorkflow(touchUserFileLambda: lambda.DockerImageFunction, followbackLambda: lambda.DockerImageFunction, sendDmLambda: lambda.DockerImageFunction): sfn.StateMachine {
+  private createWorkflow(
+    touchUserFileLambda: lambda.DockerImageFunction,
+    followbackLambda: lambda.DockerImageFunction,
+    sendDmLambda: lambda.DockerImageFunction
+  ): sfn.StateMachine {
     const touchUserFileTask = new tasks.LambdaInvoke(this, 'TouchUserFile', {
       lambdaFunction: touchUserFileLambda,
       inputPath: '$.[0].body',

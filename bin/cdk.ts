@@ -11,7 +11,7 @@ import { SignoutFlowStack } from '../lib/signout_flow_stack';
 import { SignupFlowStack } from '../lib/signup_flow_stack';
 import { WatermarkingFlowStack } from '../lib/watermarking_flow_stack';
 
-dotenv.config();
+dotenv.config({ path: './cdk.env' });
 const app = new cdk.App();
 const VALID_STAGES = ["dev", "prod"];
 const stage = app.node.tryGetContext("env");
@@ -37,6 +37,7 @@ const common = new CommonResourceStack(app, `${appName}-CommonResourceStack-${st
   maxRetries: parseInt(process.env.MAX_RETRIES || '0'),
   maxCapacity: parseInt(process.env.MAX_CAPACITY || '0'),
 });
+
 const follow = new FollowFlowStack(app, `${appName}-FollowFlowStack-${stage}`, common, { env });
 const signup = new SignupFlowStack(app, `${appName}-SignupFlowStack-${stage}`, common, { env });
 const setWatermarkImg = new SetWatermarkImgStack(app, `${appName}-SetWatermarkImgStack-${stage}`, common, { env });

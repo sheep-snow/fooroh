@@ -74,25 +74,12 @@ export class CommonResourceStack extends cdk.Stack {
     this.ecsTaskRole = this.createEcsTaskRole();
   }
 
-  private checkSecretExists(secretId: string): boolean {
-    // すでにシークレットが存在するか確認
-    try {
-      secretsmanager.Secret.fromSecretNameV2(this, secretId, secretId);
-      return true;
-    }
-    catch (e) {
-      return false;
-    }
-  }
-
   private createSecretManager(): secretsmanager.ISecret {
     const secretId = `${this.appName}-secretsmanager-${this.stage}`.toLowerCase();
-    if (this.checkSecretExists(secretId)) {
-      // 既存のシークレットを参照
-      const existingSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ExistingSecret', secretId);
-      new cdk.CfnOutput(this, 'ExistingSecretOutput', { value: `Using existing secret: ${secretId}` });
-      return existingSecret;
-    } else {
+    try {
+      // 既存のシークレットが存在する場合その参照を返す
+      return secretsmanager.Secret.fromSecretNameV2(this, secretId, secretId);
+    } catch (e) {
       const defaultSecret = JSON.stringify({
         fernet_key: crypto.randomBytes(32).toString('base64'),
         bot_userid: '?????.bsky.social',
