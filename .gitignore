@@ -32,3 +32,4 @@ coverage/
 *.zip
 .venv/
 .ruff_cache/
+cdk.context.json
