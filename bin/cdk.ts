@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { Environment } from 'aws-cdk-lib';
+import * as dotenv from "dotenv";
 import 'source-map-support/register';
 import { CommonResourceStack } from '../lib/common-resource-stack';
 import { FirehoseStack } from '../lib/firehose_stack';
@@ -10,32 +11,31 @@ import { SignoutFlowStack } from '../lib/signout_flow_stack';
 import { SignupFlowStack } from '../lib/signup_flow_stack';
 import { WatermarkingFlowStack } from '../lib/watermarking_flow_stack';
 
+dotenv.config();
 const app = new cdk.App();
-
 const VALID_STAGES = ["dev", "prod"];
 const stage = app.node.tryGetContext("env");
 if (!VALID_STAGES.includes(stage)) {
   throw new Error("Please specify the context. i.e. `--context env=dev|prod`");
 }
-const ctx = app.node.tryGetContext(stage);
 const env: Environment = {
   account: process.env.CDK_DEFAULT_ACCOUNT,
   region: process.env.CDK_DEFAULT_REGION,
 };
 
-const appName = ctx["app_name"];
+const appName = process.env.APP_NAME || "fooroh";
 const common = new CommonResourceStack(app, `${appName}-CommonResourceStack-${stage}`, {
-  contextJson: ctx,
+  contextJson: process.env,
   env: env,
   stage: stage,
-  appName: ctx["app_name"],
-  imageExpirationDays: parseInt(ctx["image_expiration_days"]),
-  userinfoExpirationDays: parseInt(ctx["userinfo_expiration_days"]),
-  logLevel: ctx["loglevel"],
-  vpcCidr: ctx["vpc-cidr"],
-  vpcMask: parseInt(ctx["vpc-mask"]),
-  maxRetries: parseInt(ctx["max_retries"]),
-  maxCapacity: parseInt(ctx["max_capacity"]),
+  appName: appName,
+  imageExpirationDays: parseInt(process.env.IMAGE_EXPIRATION_DAYS || '0'),
+  userinfoExpirationDays: parseInt(process.env.USERINFO_EXPIRATION_DAYS || '0'),
+  logLevel: process.env.LOGLEVEL || "DEBUG",
+  vpcCidr: process.env.VPC_CIDR || "10.35.0.0/24",
+  vpcMask: parseInt(process.env.VPC_MASK || '26'),
+  maxRetries: parseInt(process.env.MAX_RETRIES || '0'),
+  maxCapacity: parseInt(process.env.MAX_CAPACITY || '0'),
 });
 const follow = new FollowFlowStack(app, `${appName}-FollowFlowStack-${stage}`, common, { env });
 const signup = new SignupFlowStack(app, `${appName}-SignupFlowStack-${stage}`, common, { env });
