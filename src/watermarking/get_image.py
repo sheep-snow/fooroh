@@ -17,14 +17,14 @@ logger = get_logger(__name__)
 def _get_authors_pds_client(author_did: str) -> Client:
     resolver = IdResolver()
     did_doc = resolver.did.resolve(author_did)
-    # Since the image to be acquired is stored in the PDS in which the author participates, the Client of the PDS to which the author belongs is obtained from the author's DID.
+    # Since the image to be acquired is stored in the PDS in which the author participates,
+    # the Client of the PDS to which the author belongs is obtained from the author's DID.
     authors_pds_endpoint = did_doc.service[0].service_endpoint
     return Client(base_url=authors_pds_endpoint)
 
 
 def _save_post_text_to_s3(post, author_did):
     """ポストの本文情報をS3に保存する"""
-    # TODO implement it
     post_obj_name = PurePosixPath("posts").joinpath(author_did).with_suffix(".json")
     post_obj_name = post_obj_name.as_posix()
     post_string_object(settings.WATERMARKS_BUCKET_NAME, post_obj_name, json.dumps(post.value))
@@ -68,12 +68,12 @@ def handler(event, context):
                 .with_suffix(mimetypes.guess_extension(image.image.mime_type).pop())
             )
             img_object_name = img_object_name.as_posix()
-            post_bytes_object(settings.WATERMARKS_BUCKET_NAME, img_object_name, f)
+            post_bytes_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, img_object_name, f)
             logger.info(f"Saved watermark image to S3 {img_object_name}")
         with StringIO(metadata) as f:
             metadata_obj_name = PurePosixPath("metadatas").joinpath(author_did).with_suffix(".json")
             metadata_obj_name = metadata_obj_name.as_posix()
-            post_string_object(settings.WATERMARKS_BUCKET_NAME, metadata_obj_name, f)
+            post_string_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, metadata_obj_name, f)
             logger.info(f"Saved metadata to S3 {metadata_obj_name}")
 
     return {"message": "OK", "status": 200}

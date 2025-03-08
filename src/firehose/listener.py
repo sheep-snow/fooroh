@@ -36,8 +36,6 @@ _INTERESTED_RECORDS = {
 }
 """Listen対象とするレコードの種類"""
 
-ALT_OF_SET_WATERMARK_IMG = "fr"
-ALT_OF_SKIP_WATERMARKING = "nofr"
 MAX_QUEUE_SIZE = 10000
 FOLLOWED_QUEUE_URL = os.getenv("FOLLOWED_QUEUE_URL")
 SET_WATERMARK_IMG_QUEUE_URL = os.getenv("SET_WATERMARK_IMG_QUEUE_URL")
@@ -129,7 +127,7 @@ def _is_follows_post(post) -> bool:
 def _is_watermarking_skip(record) -> bool:
     """ウォーターマーク付与を拒否するAltが付与されている事を判定する"""
     images_alt = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
-    if ALT_OF_SKIP_WATERMARKING in images_alt:
+    if settings.ALT_OF_SKIP_WATERMARKING in images_alt:
         return True
     else:
         return False
@@ -138,7 +136,7 @@ def _is_watermarking_skip(record) -> bool:
 def _is_set_watermark_img_post(record) -> bool:
     """ウォーターマーク画像の投稿であることを判定する"""
     images_alt = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
-    if ALT_OF_SET_WATERMARK_IMG in images_alt:
+    if settings.ALT_OF_SET_WATERMARK_IMG in images_alt:
         return True
     else:
         return False

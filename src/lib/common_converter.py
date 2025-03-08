@@ -1,4 +1,5 @@
 import re
+from uuid import uuid4
 
 pat_id_in_did = re.compile(r"^did:[a-z]+:([a-zA-Z0-9]+)$")
 """didからid部だけを取得するパターン"""
@@ -17,3 +18,8 @@ def get_id_of_did(did: str) -> str | None:
             return None
     except BaseException:
         return None
+
+
+def generate_exec_id(did: str) -> str:
+    """Statemachine の実行IDを生成する"""
+    return f"{get_id_of_did(did)}-{str(uuid4())}"
