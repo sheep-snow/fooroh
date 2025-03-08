@@ -1,6 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Duration } from 'aws-cdk-lib';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as pipes from 'aws-cdk-lib/aws-pipes';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
@@ -34,6 +36,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
     commonResource.watermarkedImageBucket.grantWrite(this.watermarkingLambda);
     commonResource.watermarkedImageBucket.grantRead(this.postWatermarkedLambda);
 
+
     // Step Functionの作成
     this.flow = this.createWorkflow(
       this.getImageLambda,
@@ -41,7 +44,37 @@ export class WatermarkingFlowStack extends cdk.Stack {
       this.postWatermarkedLambda,
       this.delOriginalPostLambda
     );
+
+    this.createEventbridgePipe(commonResource);
   }
+
+  private createEventbridgePipe(commonResource: CommonResourceStack): void {
+    const pipesRole = new iam.Role(this, 'WatermarkingFlowPipesRole', {
+      assumedBy: new iam.ServicePrincipal('pipes.amazonaws.com'),
+    });
+
+    commonResource.watermarkingQueue.grantConsumeMessages(pipesRole);
+    this.flow.grantStartExecution(pipesRole);
+
+    const pipeName = `${this.stackName}-watermarking-flow-pipe`;
+    new pipes.CfnPipe(this, pipeName, {
+      name: pipeName,
+      roleArn: pipesRole.roleArn,
+      source: commonResource.watermarkingQueue.queueArn,
+      sourceParameters: {
+        sqsQueueParameters: {
+          batchSize: 1,
+        },
+      },
+      target: this.flow.stateMachineArn,
+      targetParameters: {
+        stepFunctionStateMachineParameters: {
+          invocationType: 'FIRE_AND_FORGET',
+        },
+      },
+    });
+  }
+
 
   private createWorkflow(
     getImgLambda: lambda.IFunction,
@@ -52,7 +85,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
     // Lambdaタスク定義
     const getImageTask = new tasks.LambdaInvoke(this, 'GetImage', {
       lambdaFunction: getImgLambda,
-      inputPath: '$.Payload',
+      inputPath: '$.[0].body',
       outputPath: '$',
     });
     const watermarkingTask = new tasks.LambdaInvoke(this, 'Watermarking', {
@@ -90,6 +123,9 @@ export class WatermarkingFlowStack extends cdk.Stack {
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
       code,
+      timeout: Duration.seconds(60),
+      memorySize: 256,
+      retryAttempts: 0,
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,
@@ -106,6 +142,9 @@ export class WatermarkingFlowStack extends cdk.Stack {
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
       code,
+      timeout: Duration.seconds(60),
+      memorySize: 512,
+      retryAttempts: 0,
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,
@@ -124,6 +163,9 @@ export class WatermarkingFlowStack extends cdk.Stack {
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
       code,
+      timeout: Duration.seconds(60),
+      memorySize: 512,
+      retryAttempts: 0,
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,
@@ -140,6 +182,9 @@ export class WatermarkingFlowStack extends cdk.Stack {
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
       code,
+      timeout: Duration.seconds(60),
+      memorySize: 256,
+      retryAttempts: 0,
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,

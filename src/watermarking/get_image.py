@@ -1,6 +1,5 @@
-import json
 import mimetypes
-from io import BytesIO, StringIO
+from io import BytesIO
 from pathlib import PurePosixPath
 
 from atproto import Client, IdResolver, models
@@ -8,6 +7,7 @@ from atproto import Client, IdResolver, models
 from lib.aws.s3 import post_bytes_object, post_string_object
 from lib.bs.client import get_client
 from lib.bs.get_bsky_post_by_url import get_did_from_url, get_rkey_from_url
+from lib.common_converter import get_id_of_did
 from lib.log import get_logger
 from settings import settings
 
@@ -23,68 +23,59 @@ def _get_authors_pds_client(author_did: str) -> Client:
     return Client(base_url=authors_pds_endpoint)
 
 
-def _save_post_text_to_s3(post, author_did):
+def _save_post_text_to_s3(base_path, post) -> str:
     """ポストの本文情報をS3に保存する"""
-    post_obj_name = PurePosixPath("posts").joinpath(author_did).with_suffix(".json")
+    post_obj_name = base_path.joinpath("post").with_suffix(".json")
     post_obj_name = post_obj_name.as_posix()
-    post_string_object(settings.WATERMARKS_BUCKET_NAME, post_obj_name, json.dumps(post.value))
+    post_string_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, post_obj_name, post.json())
     logger.info(f"Saved post to S3 {post_obj_name}")
+    return post_obj_name
 
 
 def handler(event, context):
     """SQSイベントが差すポストから画像を取得しS3バケットに保存する"""
     logger.info(f"Received event: {event}")
-    input = json.loads(event["Records"][0]["body"])
-    rkey = get_rkey_from_url(input.get("uri"))
-    did = get_did_from_url(input.get("uri"))
+    uri = event["uri"]
+    author_did = event["author_did"]
+
+    rkey = get_rkey_from_url(uri)
+    did = get_did_from_url(uri)
     client = get_client(settings.BOT_USERID, settings.BOT_APP_PASSWORD)
     post = client.get_post(post_rkey=rkey, profile_identify=did)
-
-    author_did = input.get("author_did")
     authors_pds_client = _get_authors_pds_client(author_did)
+    id_of_did = get_id_of_did(author_did)
 
+    return_payload = {}
+    base_path = PurePosixPath(post.cid).joinpath(id_of_did)
     # ポストの本文情報をS3に保存
-    _save_post_text_to_s3(post, author_did)
+    return_payload["metadata"] = _save_post_text_to_s3(base_path, post)
+    return_payload["images"] = []
 
+    num_of_file = 0
     # ポストに含まれる画像を取得しS3に保存
     for image in post.value.embed.images:
         blob_cid = image.image.cid.encode()
         blob = authors_pds_client.com.atproto.sync.get_blob(
             models.ComAtprotoSyncGetBlob.Params(cid=blob_cid, did=author_did)
         )
-        metadata = json.dumps(
-            {
-                "mime_type": image.image.mime_type,
-                "size": image.image.size,
-                "width": image.aspect_ratio.width,
-                "height": image.aspect_ratio.height,
-            }
-        )
         # S3に画像とそのmetadataのセットを保存
         with BytesIO(blob) as f:
-            img_object_name = (
-                PurePosixPath("images")
-                .joinpath(author_did)
-                .with_suffix(mimetypes.guess_extension(image.image.mime_type).pop())
+            img_object_name = base_path.joinpath(str(num_of_file)).with_suffix(
+                mimetypes.guess_extension(image.image.mime_type)
             )
             img_object_name = img_object_name.as_posix()
             post_bytes_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, img_object_name, f)
+            return_payload["images"].append(img_object_name)
             logger.info(f"Saved watermark image to S3 {img_object_name}")
-        with StringIO(metadata) as f:
-            metadata_obj_name = PurePosixPath("metadatas").joinpath(author_did).with_suffix(".json")
-            metadata_obj_name = metadata_obj_name.as_posix()
-            post_string_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, metadata_obj_name, f)
-            logger.info(f"Saved metadata to S3 {metadata_obj_name}")
 
-    return {"message": "OK", "status": 200}
+    return return_payload
 
 
 if __name__ == "__main__":
     sample_event = {
-        "Records": [
-            {
-                "body": '{"cid": "bafyreicqafnvvnaum3qxfgpr2gp7k6zf7orwbnekpjnhelsewzxcpr4zda", "uri": "at://did:plc:cdflm6ueigxdhbupuj5tkg2i/app.bsky.feed.post/3liwqdjex322y", "author_did": "did:plc:cdflm6ueigxdhbupuj5tkg2i", "created_at": "2025-02-24T16:10:08.206Z"}'
-            }
-        ]
+        "cid": "bafyreib2npzkfrwnwzyjzfxbtv3yzjhjuctihpopvb7wnxtfmq335j5aby",
+        "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljuyewxr322w",
+        "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7",
+        "created_at": "2025-03-08T16:53:58.074Z",
     }
     handler(sample_event, {})
