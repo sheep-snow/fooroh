@@ -184,23 +184,23 @@ def worker_main(
             if not _is_post_has_image(record):
                 # 画像投稿ではない場合はスキップ
                 continue
-            basic_msg_body = {
-                "cid": created_post["cid"],
-                "uri": created_post["uri"],
-                "author_did": created_post["author"],
-                "created_at": record.created_at,
-            }
+            msg_body = json.dumps(
+                {
+                    "cid": created_post["cid"],
+                    "uri": created_post["uri"],
+                    "author_did": created_post["author"],
+                    "created_at": record.created_at,
+                }
+            )
             # ウォーターマーク画像の投稿を検知
             if _is_set_watermark_img_post(record):
-                msg = json.dumps({**basic_msg_body, "is_watermark": True})
-                logger.info(msg)
-                sqs_client.send_message(QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg)
+                logger.info(msg_body)
+                sqs_client.send_message(QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg_body)
                 continue
             # ウォーターマーク拒否ではないコンテンツ画像の投稿を検知
             if _is_watermarking_skip(record) is False:
-                msg = json.dumps(basic_msg_body)
-                logger.info(msg)
-                sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg)
+                logger.info(msg_body)
+                sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg_body)
                 continue
 
 
