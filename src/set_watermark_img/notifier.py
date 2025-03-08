@@ -5,8 +5,6 @@ from settings import settings
 
 logger = get_logger(__name__)
 
-msg = """ウォーターマーク画像を受け取りました"""
-
 
 def handler(event, context):
     """ウォーターマーク画像が設定されたことをユーザーに通知する"""
@@ -14,7 +12,11 @@ def handler(event, context):
 
     did = event["did"]
     client = get_dm_client(settings.BOT_USERID, settings.BOT_APP_PASSWORD)
-    send_dm_to_did(client.chat.bsky.convo, did, msg)
+    send_dm_to_did(
+        client.chat.bsky.convo,
+        did,
+        f"ウォーターマーク画像を受け取りました。{event.get('width')} x {event.get('height')}",
+    )
     return {"did": did}
 
 

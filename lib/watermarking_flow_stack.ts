@@ -83,9 +83,9 @@ export class WatermarkingFlowStack extends cdk.Stack {
 
 
   private createGetImageLambda(commonResource: CommonResourceStack): lambda.DockerImageFunction {
-    const name = `${this.stackName}-watermarking-getter`;
+    const name = `${this.stackName}-watermarking-get_image`;
     const code = lambda.DockerImageCode.fromImageAsset('.', {
-      cmd: ['watermarking.getter.handler'],
+      cmd: ['watermarking.get_image.handler'],
     });
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
