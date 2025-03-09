@@ -25,3 +25,4 @@ cdk.out/
 .ruff_cache/
 .vscode/
 .unittest_results.xml
+fonts/

@@ -1,15 +1,20 @@
-import os
-import sys
+import json
+from io import BytesIO
+from pathlib import PurePosixPath
+from typing import List
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
+from lib.aws.s3 import get_object
+from lib.common_converter import get_did_from_post_uri, get_id_of_did
 from lib.log import get_logger
+from settings import settings
 
 logger = get_logger(__name__)
 
-original_image_bucket = os.getenv("ORIGINAL_IMAGE_BUCKET")
-watermarks_image_bucket = os.getenv("WATERMARKS_IMAGE_BUCKET")
-watermarked_image_bucket = os.getenv("WATERMARKED_IMAGE_BUCKET")
+original_image_bucket = settings.ORIGINAL_IMAGE_BUCKET_NAME
+watermarks_image_bucket = settings.WATERMARKS_BUCKET_NAME
+watermarked_image_bucket = settings.WATERMARKED_IMAGE_BUCKET_NAME
 
 
 # 透かしの文字
@@ -18,44 +23,99 @@ my_mark = "@ITK"
 out_file_suffix = "_wm"
 
 OPACITY = 128
-FONT_SIZE = 20
+FONT_SIZE = 64
+MAX_IMAGES = 4
 
 
-def add_watermark(input_img_path, output_img_path, watermark_text, position):
-    # 画像を開く
-    image = Image.open(input_img_path).convert("RGBA")
+def make_tile(target_width: int, target_height: int, tile_img: Image, wcnt: int) -> Image:
+    """横にwcnt枚タイリングできるタイル画像を返す"""
+    expected_width = target_width // wcnt
+    expected_height = round(tile_img.height * expected_width / tile_img.width)
+    # hcnt = target_height // expected_height
+    hcnt = round(target_height / expected_height)
+    resized_tile_img: Image = tile_img.resize((expected_width, expected_height))
 
-    # 透かし用のテキストイメージを作成
-    watermark = Image.new("RGBA", image.size)
-    draw = ImageDraw.Draw(watermark)
-    # フォントの設定（フォントファイルのパスが必要です）
-    font = ImageFont.truetype("arial.ttf", FONT_SIZE)
-    # 透かしのテキストを描画
-    text_width, text_height = draw.textlength(watermark_text, font=font), FONT_SIZE
-    x, y = position
-    draw.text((x, y), watermark_text, font=font, fill=(255, 255, 255, OPACITY))
+    # base imageにタイル画像を敷き詰めたものを返す
+    base_img = Image.new("RGBA", (target_width, target_height))
+    for i in range(wcnt):
+        for k in range(hcnt):
+            base_img.paste(
+                resized_tile_img, (i * resized_tile_img.size[0], k * resized_tile_img.size[1])
+            )
+    return base_img
 
-    # 透かしを元の画像に合成
-    watermarked = Image.alpha_composite(image, watermark)
 
-    # 保存前にRGBAからRGBに変換（JPEG保存のため）
-    rgb_image = watermarked.convert("RGB")
-    rgb_image.save(output_img_path)
+def add_watermark(input_img: Image, watermark_text, watermark_img: Image) -> Image:
+    """_summary_
+
+    Args:
+        input_img (Image): _description_
+        watermark_text (_type_): _description_
+        position (_type_): _description_
+    TBD:
+        official https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html
+        https://note.com/sakamod/n/ne5a789a1733b
+    """
+    # 透かし適用対象画像をRGBAモードに変換
+    tgt_img = input_img.convert("RGBA")
+    watermark_img = make_tile(tgt_img.width, tgt_img.height, watermark_img, 6)
+
+    # 元のウォーターマーク画像から、白を透過色として除外するマスクを適用した画像をウォーターマークとして適用する
+    _, _, _, alpha = watermark_img.split()
+    alpha_channel = 128
+    alpha.paste(Image.new("L", watermark_img.size, alpha_channel), mask=alpha)
+    watermark_mask = Image.composite(
+        Image.new("RGBA", watermark_img.size, (255, 255, 255, 0)), watermark_img, alpha
+    )
+    clear_img = Image.new("RGBA", tgt_img.size, (255, 255, 255, 200))
+    clear_img.paste(watermark_img, mask=watermark_mask)
+    tgt_img = Image.blend(tgt_img, clear_img, 0.2)
+
+    return tgt_img
+
+
+def get_watermarks_img(post_uri: str) -> Image:
+    did = get_did_from_post_uri(post_uri)
+    id = get_id_of_did(did)
+    metadata_path = PurePosixPath("metadatas").joinpath(id).with_suffix(".json")
+    metadata_obj = get_object(settings.WATERMARKS_BUCKET_NAME, metadata_path.as_posix())
+    with metadata_obj["Body"] as s:
+        metadata = json.loads(s.data.decode("utf-8"))
+    s3_obj = get_object(settings.WATERMARKS_BUCKET_NAME, metadata["path"])
+    with BytesIO(s3_obj["Body"].read()) as f:
+        img = Image.open(f).convert("RGBA")
+        # 白色を透明化
+        newData = []
+        for data in img.getdata():
+            if data[0] == 255 and data[1] == 255 and data[2] == 255:
+                newData.append((255, 255, 255, 0))
+            else:
+                newData.append(data)
+        img.putdata(newData)
+        return img
 
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
+    post = json.loads(event["post"])
+    watermarks_img = get_watermarks_img(post["uri"])
 
-    # 引数のファイルをループして、複数の入力に対応させる
-    for in_file_path in sys.argv[1:]:
-        out_file_name, out_file_ext = os.path.splitext(os.path.basename(in_file_path))
-        os_file_path = os.path.join(
-            os.path.dirname(in_file_path), out_file_name + out_file_suffix + out_file_ext
-        )
-        add_watermark(sys.argv[1], os_file_path, my_mark, (100, 100), 10, 200)
+    # post_metadata = event["metadata"]
+    image_paths: List[str] = event["image_paths"]
+    # watermarking each image
+    for path in image_paths[:MAX_IMAGES]:
+        with BytesIO(get_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, path)["Body"].read()) as f:
+            add_watermark(Image.open(f), "watermark text", watermarks_img)
 
     return {"message": "OK", "status": 200}
 
 
 if __name__ == "__main__":
-    print(handler({}, {}))
+    payload = {
+        "metadata": "bafyreia53lwl6lbdvzd5in5h55bmhqqsmoi4m57mg4qxygxa2pff2aqsnu/yzw3jty3wrlfejayynmp6oh7/post.json",
+        "image_paths": [
+            "bafyreia53lwl6lbdvzd5in5h55bmhqqsmoi4m57mg4qxygxa2pff2aqsnu/yzw3jty3wrlfejayynmp6oh7/0.jpg"
+        ],
+        "post": '{"uri":"at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljxcbvewgk2n","value":{"created_at":"2025-03-09T14:56:32.634Z","text":"ウォーターマークかけられる側画像サンプル","embed":{"images":[{"alt":"","image":{"mime_type":"image/jpeg","size":354274,"ref":{"link":"bafkreifh7wpmssrndmudjmthmuzbbitdnbcxbjcnbmbgvgfflvixworos4"},"py_type":"blob"},"aspect_ratio":{"height":2000,"width":1548,"py_type":"app.bsky.embed.defs#aspectRatio"},"py_type":"app.bsky.embed.images#image"}],"py_type":"app.bsky.embed.images"},"entities":null,"facets":null,"labels":null,"langs":["ja"],"reply":null,"tags":null,"py_type":"app.bsky.feed.post"},"cid":"bafyreia53lwl6lbdvzd5in5h55bmhqqsmoi4m57mg4qxygxa2pff2aqsnu"}',
+    }
+    handler(payload, {})

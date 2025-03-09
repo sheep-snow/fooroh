@@ -84,7 +84,7 @@ if __name__ == "__main__":
     sample_event = {
         "Records": [
             {
-                "body": '{"cid": "bafyreievlxsxato2b7yuyige7dxh6flnicgrsk75czpmw6wo2kh5wdmrk4", "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljusggsobk2w", "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7", "created_at": "2025-03-08T15:07:25.813Z", "is_watermark": true}'
+                "body": '{"cid": "bafyreiaqqrunh6uhvuyfckhf7fniaymapmym2phr7hnr5f6rzsuvwpgyva", "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljxa7qv4fc2n", "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7", "created_at": "2025-03-09T14:19:33.357Z"}'
             }
         ]
     }

@@ -1,4 +1,5 @@
 import mimetypes
+import pathlib
 from io import BytesIO
 from pathlib import PurePosixPath
 
@@ -23,11 +24,13 @@ def _get_authors_pds_client(author_did: str) -> Client:
     return Client(base_url=authors_pds_endpoint)
 
 
-def _save_post_text_to_s3(base_path, post) -> str:
+def _save_post_text_to_s3(
+    base_path: pathlib.PurePosixPath, post: models.AppBskyFeedPost.GetRecordResponse
+) -> str:
     """ポストの本文情報をS3に保存する"""
     post_obj_name = base_path.joinpath("post").with_suffix(".json")
     post_obj_name = post_obj_name.as_posix()
-    post_string_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, post_obj_name, post.json())
+    post_string_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, post_obj_name, post.model_dump_json())
     logger.info(f"Saved post to S3 {post_obj_name}")
     return post_obj_name
 
@@ -41,15 +44,17 @@ def handler(event, context):
     rkey = get_rkey_from_url(uri)
     did = get_did_from_url(uri)
     client = get_client(settings.BOT_USERID, settings.BOT_APP_PASSWORD)
-    post = client.get_post(post_rkey=rkey, profile_identify=did)
+    post: models.AppBskyFeedPost.GetRecordResponse = client.get_post(
+        post_rkey=rkey, profile_identify=did
+    )
     authors_pds_client = _get_authors_pds_client(author_did)
     id_of_did = get_id_of_did(author_did)
 
-    return_payload = {}
+    return_payload = {"metadata": {}, "image_paths": [], "post": {}}
     base_path = PurePosixPath(post.cid).joinpath(id_of_did)
     # ポストの本文情報をS3に保存
     return_payload["metadata"] = _save_post_text_to_s3(base_path, post)
-    return_payload["images"] = []
+    return_payload["post"] = post.model_dump_json()
 
     num_of_file = 0
     # ポストに含まれる画像を取得しS3に保存
@@ -65,7 +70,7 @@ def handler(event, context):
             )
             img_object_name = img_object_name.as_posix()
             post_bytes_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, img_object_name, f)
-            return_payload["images"].append(img_object_name)
+            return_payload["image_paths"].append(img_object_name)
             logger.info(f"Saved watermark image to S3 {img_object_name}")
 
     return return_payload
@@ -73,9 +78,9 @@ def handler(event, context):
 
 if __name__ == "__main__":
     sample_event = {
-        "cid": "bafyreib2npzkfrwnwzyjzfxbtv3yzjhjuctihpopvb7wnxtfmq335j5aby",
-        "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljuyewxr322w",
+        "cid": "bafyreia53lwl6lbdvzd5in5h55bmhqqsmoi4m57mg4qxygxa2pff2aqsnu",
+        "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljxcbvewgk2n",
         "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7",
-        "created_at": "2025-03-08T16:53:58.074Z",
+        "created_at": "2025-03-09T14:56:32.634Z",
     }
     handler(sample_event, {})

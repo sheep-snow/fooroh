@@ -129,7 +129,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,
-        ORIGINAL_IMAGE_BUCKET: commonResource.originalImageBucket.bucketName,
+        ORIGINAL_IMAGE_BUCKET_NAME: commonResource.originalImageBucket.bucketName,
       },
     });
   }
@@ -148,9 +148,9 @@ export class WatermarkingFlowStack extends cdk.Stack {
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,
-        ORIGINAL_IMAGE_BUCKET: commonResource.originalImageBucket.bucketName,
-        WATERMARKS_IMAGE_BUCKET: commonResource.watermarksBucket.bucketName,
-        WATERMARKED_IMAGE_BUCKET: commonResource.watermarkedImageBucket.bucketName,
+        ORIGINAL_IMAGE_BUCKET_NAME: commonResource.originalImageBucket.bucketName,
+        WATERMARKS_BUCKET_NAME: commonResource.watermarksBucket.bucketName,
+        WATERMARKED_IMAGE_BUCKET_NAME: commonResource.watermarkedImageBucket.bucketName,
       },
     });
   }
@@ -169,7 +169,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,
-        WATERMARKED_IMAGE_BUCKET: commonResource.watermarkedImageBucket.bucketName,
+        WATERMARKED_IMAGE_BUCKET_NAME: commonResource.watermarkedImageBucket.bucketName,
       },
     });
   }

@@ -26,6 +26,7 @@ export class SetWatermarkImgStack extends Stack {
 
     this.flow = this.createWorkflow(this.notifierLambda);
     this.executorLambda.addEnvironment("STATEMACHINE_ARN", this.flow.stateMachineArn);
+    this.flow.grantStartExecution(this.executorLambda);
   }
 
   private createWorkflow(notifierLambda: lambda.DockerImageFunction): sfn.StateMachine {
