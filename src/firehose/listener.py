@@ -36,8 +36,6 @@ _INTERESTED_RECORDS = {
 }
 """Listen対象とするレコードの種類"""
 
-ALT_OF_SET_WATERMARK_IMG = "fr"
-ALT_OF_SKIP_WATERMARKING = "nofr"
 MAX_QUEUE_SIZE = 10000
 FOLLOWED_QUEUE_URL = os.getenv("FOLLOWED_QUEUE_URL")
 SET_WATERMARK_IMG_QUEUE_URL = os.getenv("SET_WATERMARK_IMG_QUEUE_URL")
@@ -46,10 +44,10 @@ CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 SERVICE_NAME = os.getenv("SERVICE_NAME")
 
 
-FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 30
+FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 600
 """フォロイーテーブルを更新する間隔"""
 
-MEASURE_EVENT_INTERVAL_SECS = 10
+MEASURE_EVENT_INTERVAL_SECS = 300
 """イベントの計測間隔"""
 
 logger = get_logger(__name__)
@@ -129,7 +127,7 @@ def _is_follows_post(post) -> bool:
 def _is_watermarking_skip(record) -> bool:
     """ウォーターマーク付与を拒否するAltが付与されている事を判定する"""
     images_alt = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
-    if ALT_OF_SKIP_WATERMARKING in images_alt:
+    if settings.ALT_OF_SKIP_WATERMARKING in images_alt:
         return True
     else:
         return False
@@ -138,7 +136,7 @@ def _is_watermarking_skip(record) -> bool:
 def _is_set_watermark_img_post(record) -> bool:
     """ウォーターマーク画像の投稿であることを判定する"""
     images_alt = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
-    if ALT_OF_SET_WATERMARK_IMG in images_alt:
+    if settings.ALT_OF_SET_WATERMARK_IMG in images_alt:
         return True
     else:
         return False
@@ -184,23 +182,23 @@ def worker_main(
             if not _is_post_has_image(record):
                 # 画像投稿ではない場合はスキップ
                 continue
-            basic_msg_body = {
-                "cid": created_post["cid"],
-                "uri": created_post["uri"],
-                "author_did": created_post["author"],
-                "created_at": record.created_at,
-            }
+            msg_body = json.dumps(
+                {
+                    "cid": created_post["cid"],
+                    "uri": created_post["uri"],
+                    "author_did": created_post["author"],
+                    "created_at": record.created_at,
+                }
+            )
             # ウォーターマーク画像の投稿を検知
             if _is_set_watermark_img_post(record):
-                msg = json.dumps({**basic_msg_body, "is_watermark": True})
-                logger.info(msg)
-                sqs_client.send_message(QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg)
+                logger.info(msg_body)
+                sqs_client.send_message(QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg_body)
                 continue
             # ウォーターマーク拒否ではないコンテンツ画像の投稿を検知
             if _is_watermarking_skip(record) is False:
-                msg = json.dumps(basic_msg_body)
-                logger.info(msg)
-                sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg)
+                logger.info(msg_body)
+                sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg_body)
                 continue
 
 

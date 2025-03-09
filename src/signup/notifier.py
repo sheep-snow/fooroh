@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 
 msg = """ユーザー登録が終わりました。
 ご利用前に fr というAltをつけてウォーターマーク画像を投稿してください。
-登録が完了するとその投稿に❤️が付きますので、その投稿は消していただいて構いません。"""
+登録は何度でもやり直すことができます。"""
 
 
 def send_dm(dm, convo_id=None) -> models.ChatBskyConvoDefs.MessageView:

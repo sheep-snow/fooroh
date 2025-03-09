@@ -76,5 +76,5 @@ def post_bytes_object(bucket_name: str, key: str, body: BytesIO):
 
 
 def post_string_object(bucket_name: str, key: str, body: StringIO):
-    bytes_body = BytesIO(body.getvalue().encode("utf-8"))
+    bytes_body = BytesIO(body.encode("utf-8"))
     s3.upload_fileobj(bytes_body, bucket_name, key)

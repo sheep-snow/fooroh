@@ -56,6 +56,9 @@ def get_list_members(client: Client, list_uri: str):
         mat = re.match(
             r"^https://bsky.app/profile/(did:plc:[a-z0-9]+)/lists/([a-z0-9]+)$", list_uri
         )
+        if mat.groups() is None:
+            logger.warning(f"Invalid list uri: `{list_uri}`")
+            return set()
         list_did, id = mat.groups()
         aturi = f"at://{list_did}/app.bsky.graph.list/{id}"
         ignore_list = client.app.bsky.graph.get_list(models.AppBskyGraphGetList.Params(list=aturi))
