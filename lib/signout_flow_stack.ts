@@ -73,10 +73,16 @@ export class SignoutFlowStack extends Stack {
 
   private createSignoutQueue(): sqs.Queue {
     const name = `${this.stackName}-signout-queue`;
+    const dlq = new sqs.Queue(this, `${name}-dlq`, {
+      queueName: `${name}-dlq`,
+      deliveryDelay: Duration.minutes(5),
+      retentionPeriod: Duration.days(14),
+    });
     return new sqs.Queue(this, name, {
       queueName: name,
       visibilityTimeout: Duration.seconds(60),
       retentionPeriod: Duration.days(14),
+      deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
     });
   }
 

@@ -78,8 +78,11 @@ export class CommonResourceStack extends cdk.Stack {
     const secretId = `${this.appName}-secretsmanager-${this.stage}`.toLowerCase();
     try {
       // 既存のシークレットが存在する場合その参照を返す
-      return secretsmanager.Secret.fromSecretNameV2(this, secretId, secretId);
+      const resource = secretsmanager.Secret.fromSecretNameV2(this, secretId, secretId);
+      console.log(`****Getting existing secret: ${resource.secretArn}`);
+      return resource
     } catch (e) {
+      console.log(`****Creating new secret: ${secretId}`);
       const defaultSecret = JSON.stringify({
         fernet_key: crypto.randomBytes(32).toString('base64'),
         bot_userid: '?????.bsky.social',
@@ -97,6 +100,7 @@ export class CommonResourceStack extends cdk.Stack {
           generateStringKey: 'password',
         },
       });
+
     }
   }
 
@@ -146,29 +150,50 @@ export class CommonResourceStack extends cdk.Stack {
   }
 
   private createFollowedQueue(): sqs.IQueue {
+    const name = `${this.appName}-followed-queue-${this.stage}`;
+    const dlq = new sqs.Queue(this, `${name}-dlq`, {
+      queueName: `${name}-dlq`,
+      deliveryDelay: Duration.minutes(5),
+      retentionPeriod: Duration.days(14),
+    });
     return new sqs.Queue(this, `${this.appName}-followed-queue-${this.stage}`, {
       queueName: `${this.appName}-followed-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
       encryption: sqs.QueueEncryption.KMS_MANAGED,
+      deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
     });
   }
 
   private createSetWatermarkImgQueue(): sqs.IQueue {
-    return new sqs.Queue(this, `${this.appName}-set-watermark-img-queue-${this.stage}`, {
+    const name = `${this.appName}-set-watermark-img-queue-${this.stage}`;
+    const dlq = new sqs.Queue(this, `${name}-dlq`, {
+      queueName: `${name}-dlq`,
+      deliveryDelay: Duration.minutes(5),
+      retentionPeriod: Duration.days(14),
+    });
+    return new sqs.Queue(this, name, {
       queueName: `${this.appName}-set-watermark-img-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
       encryption: sqs.QueueEncryption.KMS_MANAGED,
+      deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
     });
   }
 
   private createWatermarkingQueue(): sqs.IQueue {
-    return new sqs.Queue(this, `${this.appName}-watermarking-queue-${this.stage}`, {
+    const name = `${this.appName}-watermarking-queue-${this.stage}`;
+    const dlq = new sqs.Queue(this, `${name}-dlq`, {
+      queueName: `${name}-dlq`,
+      deliveryDelay: Duration.minutes(5),
+      retentionPeriod: Duration.days(14),
+    });
+    return new sqs.Queue(this, name, {
       queueName: `${this.appName}-watermarking-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
       encryption: sqs.QueueEncryption.KMS_MANAGED,
+      deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
     });
   }
 
@@ -192,4 +217,5 @@ export class CommonResourceStack extends cdk.Stack {
       ],
     });
   }
+
 }
