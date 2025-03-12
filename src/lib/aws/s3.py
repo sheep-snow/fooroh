@@ -1,6 +1,6 @@
 import os
 import re
-from io import BytesIO, StringIO
+from io import BytesIO
 
 import boto3
 
@@ -75,6 +75,6 @@ def post_bytes_object(bucket_name: str, key: str, body: BytesIO):
     s3.upload_fileobj(body, bucket_name, key)
 
 
-def post_string_object(bucket_name: str, key: str, body: StringIO):
+def post_string_object(bucket_name: str, key: str, body: str):
     bytes_body = BytesIO(body.encode("utf-8"))
     s3.upload_fileobj(bytes_body, bucket_name, key)

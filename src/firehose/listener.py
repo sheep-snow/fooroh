@@ -192,12 +192,12 @@ def worker_main(
             )
             # ウォーターマーク画像の投稿を検知
             if _is_set_watermark_img_post(record):
-                logger.info(msg_body)
+                logger.info(f"Watermark Set Request Received: `{msg_body}`")
                 sqs_client.send_message(QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg_body)
                 continue
             # ウォーターマーク拒否ではないコンテンツ画像の投稿を検知
             if _is_watermarking_skip(record) is False:
-                logger.info(msg_body)
+                logger.info(f"Image Post Received: {msg_body}")
                 sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg_body)
                 continue
 

@@ -5,7 +5,7 @@ from typing import List
 
 from PIL import Image
 
-from lib.aws.s3 import get_object
+from lib.aws.s3 import get_object, post_bytes_object
 from lib.common_converter import get_did_from_post_uri, get_id_of_did
 from lib.log import get_logger
 from settings import settings
@@ -45,7 +45,7 @@ def make_tile(target_width: int, target_height: int, tile_img: Image, wcnt: int)
     return base_img
 
 
-def add_watermark(input_img: Image, watermark_text, watermark_img: Image) -> Image:
+def add_watermark(input_img: Image, watermark_img: Image) -> Image:
     """_summary_
 
     Args:
@@ -102,20 +102,28 @@ def handler(event, context):
 
     # post_metadata = event["metadata"]
     image_paths: List[str] = event["image_paths"]
+    out_image_paths: List[str] = []
     # watermarking each image
     for path in image_paths[:MAX_IMAGES]:
         with BytesIO(get_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, path)["Body"].read()) as f:
-            add_watermark(Image.open(f), "watermark text", watermarks_img)
-
-    return {"message": "OK", "status": 200}
+            watermarked_img = add_watermark(Image.open(f), watermarks_img)
+            with BytesIO() as out:
+                watermarked_img.save(out, format="PNG")
+                out.seek(0)
+                out_path = PurePosixPath(path).with_suffix(".png").as_posix()
+                post_bytes_object(settings.WATERMARKED_IMAGE_BUCKET_NAME, out_path, out)
+                out_image_paths.append(out_path)
+                logger.info(f"Saved watermarked image to S3 {out_path}")
+    event["out_image_paths"] = out_image_paths
+    return event
 
 
 if __name__ == "__main__":
     payload = {
-        "metadata": "bafyreia53lwl6lbdvzd5in5h55bmhqqsmoi4m57mg4qxygxa2pff2aqsnu/yzw3jty3wrlfejayynmp6oh7/post.json",
+        "metadata": "bafyreibulkhj5y5quqf73xlub47u42vs25l5lppqd6k5tknxcphiiywar4/yzw3jty3wrlfejayynmp6oh7/post.json",
         "image_paths": [
-            "bafyreia53lwl6lbdvzd5in5h55bmhqqsmoi4m57mg4qxygxa2pff2aqsnu/yzw3jty3wrlfejayynmp6oh7/0.jpg"
+            "bafyreibulkhj5y5quqf73xlub47u42vs25l5lppqd6k5tknxcphiiywar4/yzw3jty3wrlfejayynmp6oh7/0.jpg"
         ],
-        "post": '{"uri":"at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljxcbvewgk2n","value":{"created_at":"2025-03-09T14:56:32.634Z","text":"ウォーターマークかけられる側画像サンプル","embed":{"images":[{"alt":"","image":{"mime_type":"image/jpeg","size":354274,"ref":{"link":"bafkreifh7wpmssrndmudjmthmuzbbitdnbcxbjcnbmbgvgfflvixworos4"},"py_type":"blob"},"aspect_ratio":{"height":2000,"width":1548,"py_type":"app.bsky.embed.defs#aspectRatio"},"py_type":"app.bsky.embed.images#image"}],"py_type":"app.bsky.embed.images"},"entities":null,"facets":null,"labels":null,"langs":["ja"],"reply":null,"tags":null,"py_type":"app.bsky.feed.post"},"cid":"bafyreia53lwl6lbdvzd5in5h55bmhqqsmoi4m57mg4qxygxa2pff2aqsnu"}',
+        "post": '{"uri":"at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lk6w5lem4c2t","value":{"created_at":"2025-03-12T15:40:40.957Z","text":"","embed":{"images":[{"alt":"","image":{"mime_type":"image/jpeg","size":237449,"ref":{"link":"bafkreih4ywq2vxv7qssmi6tj6y5rwxi7t5qewb2q3tedbkambswowq2jf4"},"py_type":"blob"},"aspect_ratio":{"height":744,"width":572,"py_type":"app.bsky.embed.defs#aspectRatio"},"py_type":"app.bsky.embed.images#image"}],"py_type":"app.bsky.embed.images"},"entities":null,"facets":null,"labels":null,"langs":["ja"],"reply":null,"tags":null,"py_type":"app.bsky.feed.post"},"cid":"bafyreibulkhj5y5quqf73xlub47u42vs25l5lppqd6k5tknxcphiiywar4"}',
     }
     handler(payload, {})

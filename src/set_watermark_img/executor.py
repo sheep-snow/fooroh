@@ -1,7 +1,7 @@
 import json
 import mimetypes
 import os
-from io import BytesIO, StringIO
+from io import BytesIO
 from pathlib import PurePosixPath
 
 import boto3
@@ -63,13 +63,14 @@ def handler(event, context):
                 post_bytes_object(settings.WATERMARKS_BUCKET_NAME, img_object_name, f)
                 logger.info(f"Saved watermark image to S3 {img_object_name}")
                 metadata["path"] = img_object_name
-            with StringIO(json.dumps(metadata)) as f:
-                metadata_obj_name = (
-                    PurePosixPath("metadatas").joinpath(id_of_did).with_suffix(".json")
-                )
-                metadata_obj_name = metadata_obj_name.as_posix()
-                post_string_object(settings.WATERMARKS_BUCKET_NAME, metadata_obj_name, f)
-                logger.info(f"Saved metadata to S3 {metadata_obj_name}")
+
+            # メタデータをS3に保存
+            metadata_obj_name = PurePosixPath("metadatas").joinpath(id_of_did).with_suffix(".json")
+            metadata_obj_name = metadata_obj_name.as_posix()
+            post_string_object(
+                settings.WATERMARKS_BUCKET_NAME, metadata_obj_name, json.dumps(metadata)
+            )
+            logger.info(f"Saved metadata to S3 {metadata_obj_name}")
             # 1ポストあたり複数のウォーターマーク画像がある場合、最初に受理したものだけを使ってウォーターマークを設定する
             break
 
@@ -84,7 +85,7 @@ if __name__ == "__main__":
     sample_event = {
         "Records": [
             {
-                "body": '{"cid": "bafyreiaqqrunh6uhvuyfckhf7fniaymapmym2phr7hnr5f6rzsuvwpgyva", "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljxa7qv4fc2n", "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7", "created_at": "2025-03-09T14:19:33.357Z"}'
+                "body": '{"cid": "bafyreid2jqsob2bhfcmjnxmrs5llorv3qwi7vccbgelmeyn5f4ab4k2h5u", "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lk6vxudv322t", "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7", "created_at": "2025-03-12T15:37:29.044Z"}'
             }
         ]
     }

@@ -1,6 +1,5 @@
 import json
 import re
-from io import StringIO
 
 from atproto import models
 
@@ -54,12 +53,11 @@ def handler(event, context):
         # アプリパスワードが見つからなかった場合は例外とし後続処理に流さない
         raise AppPasswordNotFoundError("No encrypted app password")
 
-    with StringIO(json.dumps(enc_passwd)) as f:
-        post_string_object(settings.USERINFO_BUCKET_NAME, enc_passwd["did"], f)
-        logger.info(f"Saved metadata to `{settings.USERINFO_BUCKET_NAME}`")
+    post_string_object(settings.USERINFO_BUCKET_NAME, enc_passwd["did"], json.dumps(enc_passwd))
+    logger.info(f"Saved metadata to `{settings.USERINFO_BUCKET_NAME}`")
 
     return {"convo_id": convo_id}
 
 
-# if __name__ == "__main__":
-#     handler({"convo_id": "3lji2m35guy2l"}, {})
+if __name__ == "__main__":
+    handler({"convo_id": "3lji2m35guy2l"}, {})

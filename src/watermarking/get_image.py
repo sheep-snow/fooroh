@@ -71,16 +71,16 @@ def handler(event, context):
             img_object_name = img_object_name.as_posix()
             post_bytes_object(settings.ORIGINAL_IMAGE_BUCKET_NAME, img_object_name, f)
             return_payload["image_paths"].append(img_object_name)
-            logger.info(f"Saved watermark image to S3 {img_object_name}")
+            logger.info(f"Original image saved to S3 {img_object_name}")
 
     return return_payload
 
 
 if __name__ == "__main__":
     sample_event = {
-        "cid": "bafyreia53lwl6lbdvzd5in5h55bmhqqsmoi4m57mg4qxygxa2pff2aqsnu",
-        "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3ljxcbvewgk2n",
+        "cid": "bafyreibulkhj5y5quqf73xlub47u42vs25l5lppqd6k5tknxcphiiywar4",
+        "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lk6w5lem4c2t",
         "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7",
-        "created_at": "2025-03-09T14:56:32.634Z",
+        "created_at": "2025-03-12T15:40:40.957Z",
     }
     handler(sample_event, {})

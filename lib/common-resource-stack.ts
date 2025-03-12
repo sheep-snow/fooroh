@@ -160,7 +160,6 @@ export class CommonResourceStack extends cdk.Stack {
       queueName: `${this.appName}-followed-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
-      encryption: sqs.QueueEncryption.KMS_MANAGED,
       deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
     });
   }
@@ -176,7 +175,6 @@ export class CommonResourceStack extends cdk.Stack {
       queueName: `${this.appName}-set-watermark-img-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
-      encryption: sqs.QueueEncryption.KMS_MANAGED,
       deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
     });
   }
@@ -192,7 +190,6 @@ export class CommonResourceStack extends cdk.Stack {
       queueName: `${this.appName}-watermarking-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
-      encryption: sqs.QueueEncryption.KMS_MANAGED,
       deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
     });
   }

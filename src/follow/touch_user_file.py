@@ -1,5 +1,4 @@
 import json
-from io import StringIO
 
 from lib.aws.s3 import post_string_object
 from lib.log import get_logger
@@ -16,12 +15,11 @@ def handler(event, context):
     did = event["did"]
     if not did.startswith("did:plc:"):
         raise ValueError(f"Invalid did: {did}")
-    with StringIO(json.dumps({})) as f:
-        post_string_object(bucket_name, f"{did}", f)
-        logger.info(f"Created user file: {did} to {bucket_name}")
+    post_string_object(bucket_name=bucket_name, key=f"{did}", body=json.dumps({}))
+    logger.info(f"Created user file: {did} to {bucket_name}")
     return {"did": did}
 
 
 if __name__ == "__main__":
-    sample_event = [{"body": '{"did": "did:plc:e4pwxsrsghzjud5x7pbe6t65"}'}]
+    sample_event = {"did": "did:plc:yzw3jty3wrlfejayynmp6oh7"}
     handler(sample_event, {})
