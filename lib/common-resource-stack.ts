@@ -153,7 +153,7 @@ export class CommonResourceStack extends cdk.Stack {
     const name = `${this.appName}-followed-queue-${this.stage}`;
     const dlq = new sqs.Queue(this, `${name}-dlq`, {
       queueName: `${name}-dlq`,
-      deliveryDelay: Duration.minutes(5),
+      deliveryDelay: Duration.minutes(1),
       retentionPeriod: Duration.days(14),
     });
     return new sqs.Queue(this, `${this.appName}-followed-queue-${this.stage}`, {
@@ -168,14 +168,14 @@ export class CommonResourceStack extends cdk.Stack {
     const name = `${this.appName}-set-watermark-img-queue-${this.stage}`;
     const dlq = new sqs.Queue(this, `${name}-dlq`, {
       queueName: `${name}-dlq`,
-      deliveryDelay: Duration.minutes(5),
+      deliveryDelay: Duration.minutes(1),
       retentionPeriod: Duration.days(14),
     });
     return new sqs.Queue(this, name, {
       queueName: `${this.appName}-set-watermark-img-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
-      deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
+      deadLetterQueue: { queue: dlq, maxReceiveCount: 1 },
     });
   }
 

@@ -17,11 +17,6 @@ watermarks_image_bucket = settings.WATERMARKS_BUCKET_NAME
 watermarked_image_bucket = settings.WATERMARKED_IMAGE_BUCKET_NAME
 
 
-# 透かしの文字
-my_mark = "@ITK"
-# 出力ファイル名の接尾辞
-out_file_suffix = "_wm"
-
 OPACITY = 128
 FONT_SIZE = 64
 MAX_IMAGES = 4

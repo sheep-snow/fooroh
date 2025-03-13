@@ -5,8 +5,7 @@ from settings import settings
 
 logger = get_logger(__name__)
 
-msg = """ユーザー登録を開始します。アプリパスワードをこのチャット（DM）に送ってください。
-方法は https://xxxxx.com/help#reg-apppasswd で確認できます。"""
+msg = """ユーザー登録を開始します。アプリパスワードをこのチャット（DM）に送ってください。"""
 
 
 def handler(event, context):
