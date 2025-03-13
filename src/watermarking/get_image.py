@@ -56,9 +56,9 @@ def handler(event, context):
     return_payload["metadata"] = _save_post_text_to_s3(base_path, post)
     return_payload["post"] = post.model_dump_json()
 
-    num_of_file = 0
+    num_of_file = len(post.value.embed.images)
     # ポストに含まれる画像を取得しS3に保存
-    for image in post.value.embed.images:
+    for image, num_of_file in zip(post.value.embed.images, range(num_of_file)):
         blob_cid = image.image.cid.encode()
         blob = authors_pds_client.com.atproto.sync.get_blob(
             models.ComAtprotoSyncGetBlob.Params(cid=blob_cid, did=author_did)
