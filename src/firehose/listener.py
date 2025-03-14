@@ -44,11 +44,9 @@ CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 SERVICE_NAME = os.getenv("SERVICE_NAME")
 
 
-FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 600
+FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 360
 """フォロイーテーブルを更新する間隔"""
 
-MEASURE_EVENT_INTERVAL_SECS = 300
-"""イベントの計測間隔"""
 
 logger = get_logger(__name__)
 sqs_client = get_sqs_client()
@@ -147,9 +145,7 @@ def _followed_to_bot(record) -> bool:
     return record.startswith("did:at:bot:")
 
 
-def worker_main(
-    cursor_value: multiprocessing.Value, pool_queue: multiprocessing.Queue, sqs_client: boto3.client
-) -> None:
+def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing.Queue) -> None:
     """Worker main function
 
     Args:
@@ -157,6 +153,7 @@ def worker_main(
         pool_queue (multiprocessing.Queue): Queue object
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)  # we handle it in the main process
+    sqs_client = get_sqs_client()
 
     while True:
         message = pool_queue.get()
@@ -216,12 +213,14 @@ def get_firehose_params(
     return models.ComAtprotoSyncSubscribeRepos.Params(cursor=cursor_value.value)
 
 
-def update_follows_table_per_interval(func: callable) -> callable:
-    """Update follows table per interval"""
+def events_per_interval(func: callable) -> callable:
+    """Measure events per second"""
 
     def wrapper(*args) -> Any:
+        wrapper.calls += 1
         cur_time = time.time()
 
+        # Update follows table per interval
         if cur_time - wrapper.start_time >= FOLLOWED_LIST_UPDATE_INTERVAL_SECS:
             global current_follows
             global bluesky_client
@@ -232,30 +231,39 @@ def update_follows_table_per_interval(func: callable) -> callable:
 
         return func(*args)
 
-    wrapper.start_time = time.time()
-
-    return wrapper
-
-
-def measure_events_per_interval(func: callable) -> callable:
-    """Measure events per second"""
-
-    def wrapper(*args) -> Any:
-        wrapper.calls += 1
-        cur_time = time.time()
-
-        if cur_time - wrapper.start_time >= MEASURE_EVENT_INTERVAL_SECS:
-            rate = int(wrapper.calls / MEASURE_EVENT_INTERVAL_SECS)
-            logger.debug(f"NETWORK LOAD: {rate} events/second")
-            wrapper.start_time = cur_time
-            wrapper.calls = 0
-
-        return func(*args)
-
     wrapper.calls = 0
     wrapper.start_time = time.time()
 
     return wrapper
+
+
+def _get_current_follows(bsclient: Client) -> set:
+    whitelist = get_list_members(bsclient, settings.WHITE_LIST_URI)
+    if len(whitelist) > 0:
+        # whitelistに登録がある場合は
+        # whitelistに含まれるユーザーのみをフォローしているとみなす
+        return whitelist
+    follows = get_follows(bsclient)
+    ignores = get_list_members(bsclient, settings.IGNORE_LIST_URI)
+    # 無視リストに登録されているユーザーを除外して返す
+    return follows.difference(ignores)
+
+
+def on_callback_error_handler(error: BaseException) -> None:
+    logger.error(f"Got error! {str(error)}")
+    try:
+        # エラー時のタスク再起動処理
+        # エラーを吐いたら自タスクは起動している意味がないため自身で停止し
+        # サービス定義の desired count に従って復帰させる
+        logger.info("Stopping ECS tasks...")
+        ecs_client = boto3.client("ecs")
+        response = ecs_client.list_tasks(cluster=CLUSTER_NAME, launchType="FARGATE")
+        for taskArn in response["taskArns"]:
+            ecs_client.stop_task(cluster=CLUSTER_NAME, task=taskArn)
+        logger.info("All ECS task stopped successfully.")
+    except Exception:
+        logger.warning("Failed to stop ECS tasks.")
+    signal_handler(None, None)
 
 
 def signal_handler(_: int, __: FrameType) -> None:
@@ -281,34 +289,6 @@ def signal_handler(_: int, __: FrameType) -> None:
     exit(0)
 
 
-def _get_current_follows(bsclient: Client) -> set:
-    whitelist = get_list_members(bsclient, settings.WHITE_LIST_URI)
-    if len(whitelist) > 0:
-        # whitelistに登録がある場合は
-        # whitelistに含まれるユーザーのみをフォローしているとみなす
-        return whitelist
-    follows = get_follows(bsclient)
-    ignores = get_list_members(bsclient, settings.IGNORE_LIST_URI)
-    # 無視リストに登録されているユーザーを除外して返す
-    return follows.difference(ignores)
-
-
-def on_callback_error_handler(error: BaseException) -> None:
-    logger.error("Got error!")
-    try:
-        # エラー時のタスク再起動処理
-        # エラーを吐いたら自タスクは起動している意味がないため自身で停止し
-        # サービス定義の desired count に従って復帰させる
-        logger.info("Stopping ECS tasks...")
-        ecs_client = boto3.client("ecs")
-        response = ecs_client.list_tasks(cluster=CLUSTER_NAME, launchType="FARGATE")
-        for taskArn in response["taskArns"]:
-            ecs_client.stop_task(cluster=CLUSTER_NAME, task=taskArn)
-        logger.info("All ECS task stopped successfully.")
-    except Exception:
-        logger.warning("Failed to stop ECS tasks.")
-
-
 def main():
     logger.info("Starting Bluesky Client Session...")
     global current_follows
@@ -331,14 +311,13 @@ def main():
     global client
     client = FirehoseSubscribeReposClient(params)
 
-    workers_count = multiprocessing.cpu_count() * 2 - 1
-    # workers_count = 1 # DEBUG
+    # workers_count = multiprocessing.cpu_count() * 2 - 1
+    workers_count = 1  # DEBUG
 
     queue = multiprocessing.Queue(maxsize=MAX_QUEUE_SIZE)
-    pool = multiprocessing.Pool(workers_count, worker_main, (cursor, queue, sqs_client))  # noqa
+    pool = multiprocessing.Pool(workers_count, worker_main, (cursor, queue))  # noqa
 
-    @update_follows_table_per_interval
-    @measure_events_per_interval
+    @events_per_interval
     def on_message_handler(message: firehose_models.MessageFrame) -> None:
         if cursor.value:
             # we are using updating the cursor state here because of multiprocessing
@@ -348,7 +327,6 @@ def main():
         queue.put(message)
 
     client.start(on_message_handler, on_callback_error_handler)
-    # client.start(on_message_handler)
 
 
 if __name__ == "__main__":
