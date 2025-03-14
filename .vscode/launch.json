@@ -10,16 +10,8 @@
             "args": [],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src:${PYTHONPATH}",
-                "SECRET_NAME": "fooroh-secretsmanager-dev",
-                "AWS_REGION": "ap-northeast-1",
-                "USERINFO_BUCKET_NAME": "",
-                "FOLLOWED_QUEUE_URL": "",
-                "STATEMACHINE_ARN": "",
-                "SET_WATERMARK_IMG_QUEUE_URL": "",
-                "WATERMARKS_BUCKET_NAME": "",
-                "CLUSTER_NAME": "",
-                "SERVICE_NAME": "",
-            }
+            },
+            "envFile": "${workspaceFolder}/.launch.env"
         },
         {
             "name": "Run Test",
@@ -33,9 +25,8 @@
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src:${PYTHONPATH}",
-                "SECRET_NAME": "fooroh-secretsmanager-dev",
-                "AWS_REGION": "ap-northeast-1",
-            }
+            },
+            "envFile": "${workspaceFolder}/.launch.env"
         },
         {
             "name": "Run Ruff Check",
@@ -48,9 +39,8 @@
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src:${PYTHONPATH}",
-                "SECRET_NAME": "fooroh-secretsmanager-dev",
-                "AWS_REGION": "ap-northeast-1",
-            }
+            },
+            "envFile": "${workspaceFolder}/.launch.env"
         }
     ]
 }

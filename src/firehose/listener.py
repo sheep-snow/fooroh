@@ -36,8 +36,6 @@ _INTERESTED_RECORDS = {
 }
 """Listen対象とするレコードの種類"""
 
-ALT_OF_SET_WATERMARK_IMG = "fr"
-ALT_OF_SKIP_WATERMARKING = "nofr"
 MAX_QUEUE_SIZE = 10000
 FOLLOWED_QUEUE_URL = os.getenv("FOLLOWED_QUEUE_URL")
 SET_WATERMARK_IMG_QUEUE_URL = os.getenv("SET_WATERMARK_IMG_QUEUE_URL")
@@ -46,11 +44,9 @@ CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 SERVICE_NAME = os.getenv("SERVICE_NAME")
 
 
-FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 30
+FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 360
 """フォロイーテーブルを更新する間隔"""
 
-MEASURE_EVENT_INTERVAL_SECS = 10
-"""イベントの計測間隔"""
 
 logger = get_logger(__name__)
 sqs_client = get_sqs_client()
@@ -129,7 +125,7 @@ def _is_follows_post(post) -> bool:
 def _is_watermarking_skip(record) -> bool:
     """ウォーターマーク付与を拒否するAltが付与されている事を判定する"""
     images_alt = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
-    if ALT_OF_SKIP_WATERMARKING in images_alt:
+    if settings.ALT_OF_SKIP_WATERMARKING in images_alt:
         return True
     else:
         return False
@@ -138,7 +134,7 @@ def _is_watermarking_skip(record) -> bool:
 def _is_set_watermark_img_post(record) -> bool:
     """ウォーターマーク画像の投稿であることを判定する"""
     images_alt = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
-    if ALT_OF_SET_WATERMARK_IMG in images_alt:
+    if settings.ALT_OF_SET_WATERMARK_IMG in images_alt:
         return True
     else:
         return False
@@ -149,9 +145,7 @@ def _followed_to_bot(record) -> bool:
     return record.startswith("did:at:bot:")
 
 
-def worker_main(
-    cursor_value: multiprocessing.Value, pool_queue: multiprocessing.Queue, sqs_client: boto3.client
-) -> None:
+def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing.Queue) -> None:
     """Worker main function
 
     Args:
@@ -159,6 +153,7 @@ def worker_main(
         pool_queue (multiprocessing.Queue): Queue object
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)  # we handle it in the main process
+    sqs_client = get_sqs_client()
 
     while True:
         message = pool_queue.get()
@@ -184,23 +179,23 @@ def worker_main(
             if not _is_post_has_image(record):
                 # 画像投稿ではない場合はスキップ
                 continue
-            basic_msg_body = {
-                "cid": created_post["cid"],
-                "uri": created_post["uri"],
-                "author_did": created_post["author"],
-                "created_at": record.created_at,
-            }
+            msg_body = json.dumps(
+                {
+                    "cid": created_post["cid"],
+                    "uri": created_post["uri"],
+                    "author_did": created_post["author"],
+                    "created_at": record.created_at,
+                }
+            )
             # ウォーターマーク画像の投稿を検知
             if _is_set_watermark_img_post(record):
-                msg = json.dumps({**basic_msg_body, "is_watermark": True})
-                logger.info(msg)
-                sqs_client.send_message(QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg)
+                logger.info(f"Watermark Set Request Received: `{msg_body}`")
+                sqs_client.send_message(QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg_body)
                 continue
             # ウォーターマーク拒否ではないコンテンツ画像の投稿を検知
             if _is_watermarking_skip(record) is False:
-                msg = json.dumps(basic_msg_body)
-                logger.info(msg)
-                sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg)
+                logger.info(f"Image Post Received: {msg_body}")
+                sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg_body)
                 continue
 
 
@@ -218,12 +213,14 @@ def get_firehose_params(
     return models.ComAtprotoSyncSubscribeRepos.Params(cursor=cursor_value.value)
 
 
-def update_follows_table_per_interval(func: callable) -> callable:
-    """Update follows table per interval"""
+def events_per_interval(func: callable) -> callable:
+    """Measure events per second"""
 
     def wrapper(*args) -> Any:
+        wrapper.calls += 1
         cur_time = time.time()
 
+        # Update follows table per interval
         if cur_time - wrapper.start_time >= FOLLOWED_LIST_UPDATE_INTERVAL_SECS:
             global current_follows
             global bluesky_client
@@ -234,30 +231,39 @@ def update_follows_table_per_interval(func: callable) -> callable:
 
         return func(*args)
 
-    wrapper.start_time = time.time()
-
-    return wrapper
-
-
-def measure_events_per_interval(func: callable) -> callable:
-    """Measure events per second"""
-
-    def wrapper(*args) -> Any:
-        wrapper.calls += 1
-        cur_time = time.time()
-
-        if cur_time - wrapper.start_time >= MEASURE_EVENT_INTERVAL_SECS:
-            rate = int(wrapper.calls / MEASURE_EVENT_INTERVAL_SECS)
-            logger.debug(f"NETWORK LOAD: {rate} events/second")
-            wrapper.start_time = cur_time
-            wrapper.calls = 0
-
-        return func(*args)
-
     wrapper.calls = 0
     wrapper.start_time = time.time()
 
     return wrapper
+
+
+def _get_current_follows(bsclient: Client) -> set:
+    whitelist = get_list_members(bsclient, settings.WHITE_LIST_URI)
+    if len(whitelist) > 0:
+        # whitelistに登録がある場合は
+        # whitelistに含まれるユーザーのみをフォローしているとみなす
+        return whitelist
+    follows = get_follows(bsclient)
+    ignores = get_list_members(bsclient, settings.IGNORE_LIST_URI)
+    # 無視リストに登録されているユーザーを除外して返す
+    return follows.difference(ignores)
+
+
+def on_callback_error_handler(error: BaseException) -> None:
+    logger.error(f"Got error! {str(error)}")
+    try:
+        # エラー時のタスク再起動処理
+        # エラーを吐いたら自タスクは起動している意味がないため自身で停止し
+        # サービス定義の desired count に従って復帰させる
+        logger.info("Stopping ECS tasks...")
+        ecs_client = boto3.client("ecs")
+        response = ecs_client.list_tasks(cluster=CLUSTER_NAME, launchType="FARGATE")
+        for taskArn in response["taskArns"]:
+            ecs_client.stop_task(cluster=CLUSTER_NAME, task=taskArn)
+        logger.info("All ECS task stopped successfully.")
+    except Exception:
+        logger.warning("Failed to stop ECS tasks.")
+    signal_handler(None, None)
 
 
 def signal_handler(_: int, __: FrameType) -> None:
@@ -283,34 +289,6 @@ def signal_handler(_: int, __: FrameType) -> None:
     exit(0)
 
 
-def _get_current_follows(bsclient: Client) -> set:
-    whitelist = get_list_members(bsclient, settings.WHITE_LIST_URI)
-    if len(whitelist) > 0:
-        # whitelistに登録がある場合は
-        # whitelistに含まれるユーザーのみをフォローしているとみなす
-        return whitelist
-    follows = get_follows(bsclient)
-    ignores = get_list_members(bsclient, settings.IGNORE_LIST_URI)
-    # 無視リストに登録されているユーザーを除外して返す
-    return follows.difference(ignores)
-
-
-def on_callback_error_handler(error: BaseException) -> None:
-    logger.error("Got error!")
-    try:
-        # エラー時のタスク再起動処理
-        # エラーを吐いたら自タスクは起動している意味がないため自身で停止し
-        # サービス定義の desired count に従って復帰させる
-        logger.info("Stopping ECS tasks...")
-        ecs_client = boto3.client("ecs")
-        response = ecs_client.list_tasks(cluster=CLUSTER_NAME, launchType="FARGATE")
-        for taskArn in response["taskArns"]:
-            ecs_client.stop_task(cluster=CLUSTER_NAME, task=taskArn)
-        logger.info("All ECS task stopped successfully.")
-    except Exception:
-        logger.warning("Failed to stop ECS tasks.")
-
-
 def main():
     logger.info("Starting Bluesky Client Session...")
     global current_follows
@@ -333,14 +311,13 @@ def main():
     global client
     client = FirehoseSubscribeReposClient(params)
 
-    workers_count = multiprocessing.cpu_count() * 2 - 1
-    # workers_count = 1 # DEBUG
+    # workers_count = multiprocessing.cpu_count() * 2 - 1
+    workers_count = 1  # DEBUG
 
     queue = multiprocessing.Queue(maxsize=MAX_QUEUE_SIZE)
-    pool = multiprocessing.Pool(workers_count, worker_main, (cursor, queue, sqs_client))  # noqa
+    pool = multiprocessing.Pool(workers_count, worker_main, (cursor, queue))  # noqa
 
-    @update_follows_table_per_interval
-    @measure_events_per_interval
+    @events_per_interval
     def on_message_handler(message: firehose_models.MessageFrame) -> None:
         if cursor.value:
             # we are using updating the cursor state here because of multiprocessing
@@ -350,7 +327,6 @@ def main():
         queue.put(message)
 
     client.start(on_message_handler, on_callback_error_handler)
-    # client.start(on_message_handler)
 
 
 if __name__ == "__main__":
