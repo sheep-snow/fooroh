@@ -18,7 +18,6 @@ watermarked_image_bucket = settings.WATERMARKED_IMAGE_BUCKET_NAME
 
 
 OPACITY = 128
-FONT_SIZE = 64
 MAX_IMAGES = 4
 
 

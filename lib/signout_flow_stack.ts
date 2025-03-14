@@ -136,7 +136,7 @@ export class SignoutFlowStack extends Stack {
       },
       timeout: Duration.seconds(120),
       description: 'Find follow events and send to SQS',
-      memorySize: 512,
+      memorySize: 416,
       retryAttempts: 0,
     });
   }

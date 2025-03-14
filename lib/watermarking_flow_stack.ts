@@ -123,8 +123,8 @@ export class WatermarkingFlowStack extends cdk.Stack {
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
       code,
-      timeout: Duration.seconds(60),
-      memorySize: 256,
+      timeout: Duration.seconds(120),
+      memorySize: 384,
       retryAttempts: 0,
       environment: {
         LOG_LEVEL: commonResource.loglevel,
@@ -142,7 +142,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
       code,
-      timeout: Duration.seconds(60),
+      timeout: Duration.seconds(80),
       memorySize: 512,
       retryAttempts: 0,
       environment: {
@@ -163,7 +163,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
       code,
-      timeout: Duration.seconds(60),
+      timeout: Duration.seconds(80),
       memorySize: 512,
       retryAttempts: 0,
       environment: {
@@ -183,7 +183,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
       functionName: name,
       code,
       timeout: Duration.seconds(60),
-      memorySize: 256,
+      memorySize: 128,
       retryAttempts: 0,
       environment: {
         LOG_LEVEL: commonResource.loglevel,

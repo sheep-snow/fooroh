@@ -110,7 +110,7 @@ export class CommonResourceStack extends cdk.Stack {
       bucketName: originalBucketId,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
-      lifecycleRules: [{ expiration: Duration.days(this.imageExpirationDays) }],
+      lifecycleRules: [{ expiration: Duration.days(this.imageExpirationDays) }, { abortIncompleteMultipartUploadAfter: cdk.Duration.days(1) }],
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
     });
@@ -121,8 +121,10 @@ export class CommonResourceStack extends cdk.Stack {
     return new s3.Bucket(this, watermarksBucketId, {
       bucketName: watermarksBucketId,
       removalPolicy: RemovalPolicy.DESTROY,
+      lifecycleRules: [{ abortIncompleteMultipartUploadAfter: cdk.Duration.days(1) }],
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
     });
   }
 
@@ -132,7 +134,7 @@ export class CommonResourceStack extends cdk.Stack {
       bucketName: watermarkedBucketId,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
-      lifecycleRules: [{ expiration: Duration.days(this.imageExpirationDays) }],
+      lifecycleRules: [{ expiration: Duration.days(this.imageExpirationDays) }, { abortIncompleteMultipartUploadAfter: cdk.Duration.days(1) }],
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
     });
@@ -143,6 +145,7 @@ export class CommonResourceStack extends cdk.Stack {
     return new s3.Bucket(this, userinfoBucketId, {
       bucketName: userinfoBucketId,
       removalPolicy: RemovalPolicy.DESTROY,
+      lifecycleRules: [{ abortIncompleteMultipartUploadAfter: cdk.Duration.days(1) }],
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -155,12 +158,14 @@ export class CommonResourceStack extends cdk.Stack {
       queueName: `${name}-dlq`,
       deliveryDelay: Duration.minutes(1),
       retentionPeriod: Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
     });
     return new sqs.Queue(this, `${this.appName}-followed-queue-${this.stage}`, {
       queueName: `${this.appName}-followed-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
       deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
     });
   }
 
@@ -170,12 +175,14 @@ export class CommonResourceStack extends cdk.Stack {
       queueName: `${name}-dlq`,
       deliveryDelay: Duration.minutes(1),
       retentionPeriod: Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
     });
     return new sqs.Queue(this, name, {
       queueName: `${this.appName}-set-watermark-img-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
       deadLetterQueue: { queue: dlq, maxReceiveCount: 1 },
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
     });
   }
 
@@ -185,12 +192,14 @@ export class CommonResourceStack extends cdk.Stack {
       queueName: `${name}-dlq`,
       deliveryDelay: Duration.minutes(5),
       retentionPeriod: Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
     });
     return new sqs.Queue(this, name, {
       queueName: `${this.appName}-watermarking-queue-${this.stage}`,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
       deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
     });
   }
 
