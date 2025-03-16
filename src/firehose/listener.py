@@ -24,7 +24,7 @@ from lib.log import get_logger
 from settings import settings
 
 _INTERESTED_RECORDS = {models.ids.AppBskyFeedPost: models.AppBskyFeedPost}
-FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 10
+FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 300
 """フォロイーテーブルを更新する間隔"""
 
 SET_WATERMARK_IMG_QUEUE_URL = os.getenv("SET_WATERMARK_IMG_QUEUE_URL")
