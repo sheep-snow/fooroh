@@ -40,7 +40,6 @@ def _save_watermark_img_to_s3(event: dict):
     did = get_did_from_url(input.get("uri"))
     client = get_client(settings.BOT_USERID, settings.BOT_APP_PASSWORD)
     post = client.get_post(post_rkey=rkey, profile_identify=did)
-
     # いいねを付ける
     client.like(uri=input.get("uri"), cid=input.get("cid"))
 

@@ -47,6 +47,9 @@ def handler(event, context):
     post: models.AppBskyFeedPost.GetRecordResponse = client.get_post(
         post_rkey=rkey, profile_identify=did
     )
+    # いいねを付ける
+    client.like(uri=input.get("uri"), cid=input.get("cid"))
+
     authors_pds_client = _get_authors_pds_client(author_did)
     id_of_did = get_id_of_did(author_did)
 
