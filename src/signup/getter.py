@@ -5,6 +5,7 @@ from atproto import models
 
 from lib.aws.s3 import post_string_object
 from lib.bs.client import get_dm_client
+from lib.common_converter import get_id_of_did
 from lib.fernet import encrypt
 from lib.log import get_logger
 from settings import settings
@@ -52,8 +53,8 @@ def handler(event, context):
     if enc_passwd is None or len(enc_passwd) == 0:
         # アプリパスワードが見つからなかった場合は例外とし後続処理に流さない
         raise AppPasswordNotFoundError("No encrypted app password")
-
-    post_string_object(settings.USERINFO_BUCKET_NAME, enc_passwd["did"], json.dumps(enc_passwd))
+    obj_key = get_id_of_did(enc_passwd["did"])
+    post_string_object(settings.USERINFO_BUCKET_NAME, obj_key, json.dumps(enc_passwd))
     logger.info(f"Saved metadata to `{settings.USERINFO_BUCKET_NAME}`")
 
     return {"convo_id": convo_id}

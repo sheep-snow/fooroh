@@ -15,10 +15,9 @@ and then posts a replacement image with the watermark with you as the authorauth
 def handler(event, context):
     """ウォーターマーク画像が設定されたことをユーザーに通知する"""
     logger.info(f"Received event: {event}")
-    message = ""
     did = event["did"]
     client = get_dm_client(settings.BOT_USERID, settings.BOT_APP_PASSWORD)
-    send_dm_to_did(client.chat.bsky.convo, did, message)
+    send_dm_to_did(client.chat.bsky.convo, did, msg)
     return {"did": did}
 
 

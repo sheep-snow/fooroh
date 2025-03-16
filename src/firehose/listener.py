@@ -24,7 +24,7 @@ from lib.log import get_logger
 from settings import settings
 
 _INTERESTED_RECORDS = {models.ids.AppBskyFeedPost: models.AppBskyFeedPost}
-FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 300
+FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 600
 """フォロイーテーブルを更新する間隔"""
 
 SET_WATERMARK_IMG_QUEUE_URL = os.getenv("SET_WATERMARK_IMG_QUEUE_URL")
@@ -80,37 +80,13 @@ def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defa
     return operation_by_type
 
 
-def update_events_per_interval(func: callable) -> callable:
-    def wrapper(*args) -> Any:
-        wrapper.calls += 1
-        cur_time = time.time()
-
-        if cur_time - wrapper.start_time >= FOLLOWED_LIST_UPDATE_INTERVAL_SECS:
-            global bsclient
-            global current_follows
-            current_follows = _get_current_follows(bsclient)
-            logger.debug(f"Update in memory Follows table, {len(current_follows)} follows.")
-
-        return func(*args)
-
-    wrapper.calls = 0
-    wrapper.start_time = time.time()
-
-    return wrapper
-
-
 def intervaled_events(func: callable) -> callable:
     def wrapper(*args) -> Any:
         wrapper.calls += 1
         cur_time = time.time()
 
-        # if cur_time - wrapper.start_time >= 1:
-        #     logger.debug(f"NETWORK LOAD: {wrapper.calls} events/second")
-        #     wrapper.start_time = cur_time
-        #     wrapper.calls = 0
-
         if cur_time - wrapper.start_time >= FOLLOWED_LIST_UPDATE_INTERVAL_SECS:
-            global bsclient
+            bsclient = get_client(settings.BOT_USERID, settings.BOT_APP_PASSWORD)
             global current_follows
             current_follows = _get_current_follows(bsclient)
             logger.debug(f"Update in memory Follows table, {len(current_follows)} follows.")
@@ -215,12 +191,12 @@ async def main(firehose_client: AsyncFirehoseSubscribeReposClient) -> None:
 
 
 if __name__ == "__main__":
-    global bsclient
     global current_follows
     global sqs_client
     sqs_client = get_sqs_client()
     bsclient = get_client(settings.BOT_USERID, settings.BOT_APP_PASSWORD)
     current_follows = _get_current_follows(bsclient)
+    logger.info(f"Update in memory Follows table, {len(current_follows)} follows.")
 
     signal.signal(signal.SIGINT, lambda _, __: asyncio.create_task(signal_handler(_, __)))
 

@@ -24,9 +24,8 @@ def get_followers_did(client: atproto.Client, did: str) -> set[Optional[str]]:
     return {i.did for i in resp.followers}
 
 
-def handler(event, context):
+def start_statemachine(event):
     """新規に開始された会話を処理するStatemachineを実行する"""
-    logger.info(f"Received event: {event}")
     sm_arn = os.environ["STATEMACHINE_ARN"]
     if sm_arn is None:
         raise ValueError("STATEMACHINE_ARN is not set.")
@@ -56,6 +55,16 @@ def handler(event, context):
             logger.error(
                 f"Could not start state machine: {e.response['Error']['Code']} {e.response['Error']['Message']}"
             )
+
+
+def handler(event, context):
+    """新規に開始された会話を処理するStatemachineを実行する"""
+    logger.info(f"Received event: {event}")
+    try:
+        start_statemachine(event)
+    except Exception as e:
+        logger.error(f"Failed to start state machine: {e}")
+
     return {"statusCode": 200, "body": "OK"}
 
 

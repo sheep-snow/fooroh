@@ -20,22 +20,31 @@ logger = get_logger(__name__)
 def _get_authors_pds_client(author_did: str) -> Client:
     resolver = IdResolver()
     did_doc = resolver.did.resolve(author_did)
-    # Since the image to be acquired is stored in the PDS in which the author participates, the Client of the PDS to which the author belongs is obtained from the author's DID.
     authors_pds_endpoint = did_doc.service[0].service_endpoint
     return Client(base_url=authors_pds_endpoint)
 
 
-def handler(event, context):
-    """SQSイベントが差すポストからウォーターマーク画像を特定し、フローを起動する"""
-    logger.info(f"Received event: {event}")
-    input = json.loads(event["Records"][0]["body"])
+def _start_workflow(author_did: str, metadata: dict):
+    """ステートマシンを起動する"""
     sm_arn = os.environ["STATEMACHINE_ARN"]
     sfn_client = boto3.client("stepfunctions")
+
+    exec_id = generate_exec_id(author_did)
+    sfn_client.start_execution(stateMachineArn=sm_arn, name=exec_id, input=json.dumps(metadata))
+    logger.info(f"Started state machine execution_id=`{exec_id}`")
+
+
+def _save_watermark_img_to_s3(event: dict):
+    input = json.loads(event["Records"][0]["body"])
     rkey = get_rkey_from_url(input.get("uri"))
     did = get_did_from_url(input.get("uri"))
     client = get_client(settings.BOT_USERID, settings.BOT_APP_PASSWORD)
     post = client.get_post(post_rkey=rkey, profile_identify=did)
 
+    # いいねを付ける
+    client.like(uri=input.get("uri"), cid=input.get("cid"))
+
+    # ウォーターマーク画像を取得し、S3に保存
     author_did = input.get("author_did")
     authors_pds_client = _get_authors_pds_client(author_did)
     for image in post.value.embed.images:
@@ -71,12 +80,21 @@ def handler(event, context):
                 settings.WATERMARKS_BUCKET_NAME, metadata_obj_name, json.dumps(metadata)
             )
             logger.info(f"Saved metadata to S3 {metadata_obj_name}")
+
+            # ステートマシンを起動
+            _start_workflow(author_did, metadata)
+
             # 1ポストあたり複数のウォーターマーク画像がある場合、最初に受理したものだけを使ってウォーターマークを設定する
             break
 
-    exec_id = generate_exec_id(author_did)
-    sfn_client.start_execution(stateMachineArn=sm_arn, name=exec_id, input=json.dumps(metadata))
-    logger.info(f"Started state machine execution_id=`{exec_id}`")
+
+def handler(event, context):
+    """SQSイベントが差すポストからウォーターマーク画像を特定し、フローを起動する"""
+    logger.info(f"Received event: {event}")
+    try:
+        _save_watermark_img_to_s3(event)
+    except Exception as e:
+        logger.error(e)
 
     return {"message": "OK", "status": 200}
 
@@ -85,7 +103,7 @@ if __name__ == "__main__":
     sample_event = {
         "Records": [
             {
-                "body": '{"cid": "bafyreid2jqsob2bhfcmjnxmrs5llorv3qwi7vccbgelmeyn5f4ab4k2h5u", "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lk6vxudv322t", "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7", "created_at": "2025-03-12T15:37:29.044Z"}'
+                "body": '{"cid": "bafyreiaytzibck6j2nza33zpsebg4kvdibisatohrzkwh3lmw3t6dvqvzq", "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lkik73z4vs2l", "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7", "created_at": "2025-03-16T11:33:24.416Z"}'
             }
         ]
     }

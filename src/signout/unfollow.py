@@ -47,4 +47,4 @@ def handler(event, context):
 
 
 if __name__ == "__main__":
-    print(handler({}, {}))
+    handler({"did": "did:plc:e4pwxsrsghzjud5x7pbe6t65"}, {})
