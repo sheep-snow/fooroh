@@ -24,19 +24,23 @@ def delete_repost(user_client: Client, repost_uri: str):
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
+    logger.info(f"Getting deleting post metadata from `{settings.ORIGINAL_IMAGE_BUCKET_NAME}`...")
 
-    metadata = get_metadata(settings.ORIGINAL_IMAGE_BUCKET_NAME, event["metadata"])
-    original_post_uri = metadata["uri"]
-    author_did = get_did_from_post_uri(original_post_uri)
-    author_app_passwd = get_author_app_passwd(author_did)
-    user_client = get_client(author_did, author_app_passwd)
-    if user_client.delete_post(original_post_uri):
-        msg = f"Original post deleted successfully, uri: {original_post_uri}"
-        logger.info(msg)
-        return {"status": "success", "message": msg, "status_code": 200}
-    else:
-        # This is a critical error, so we should raise an exception
-        return delete_repost(user_client, json.loads(event["repost"])["uri"])
+    try:
+        metadata = get_metadata(settings.ORIGINAL_IMAGE_BUCKET_NAME, event["metadata"])
+        original_post_uri = metadata["uri"]
+        author_did = get_did_from_post_uri(original_post_uri)
+        author_app_passwd = get_author_app_passwd(author_did)
+        user_client = get_client(author_did, author_app_passwd)
+        if user_client.delete_post(original_post_uri):
+            msg = f"Original post deleted successfully, uri: {original_post_uri}"
+            logger.info(msg)
+            return {"status": "success", "message": msg, "status_code": 200}
+        else:
+            # This is a critical error, so we should raise an exception
+            return delete_repost(user_client, json.loads(event["repost"])["uri"])
+    except Exception as e:
+        logger.error(f"Failed to delete original post, error: {str(e)}")
 
 
 if __name__ == "__main__":

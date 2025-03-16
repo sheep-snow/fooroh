@@ -38,6 +38,10 @@ export class SignoutFlowStack extends Stack {
     commonResource.secretManager.grantRead(this.delWatermarksLambda);
     commonResource.secretManager.grantRead(this.sendDmLambda);
 
+    commonResource.userinfoBucket.grantReadWrite(this.delUserFilesLambda);
+    commonResource.userinfoBucket.grantRead(this.delWatermarksLambda);
+    commonResource.watermarksBucket.grantReadWrite(this.delWatermarksLambda);
+
     this.flow = this.createWorkflow(this.delUserFilesLambda, this.delWatermarksLambda, this.sendDmLambda);
     this.findFollowEventsLambda.addEnvironment("STATE_MACHINE_ARN", this.flow.stateMachineArn);
 

@@ -35,7 +35,10 @@ export class WatermarkingFlowStack extends cdk.Stack {
     commonResource.watermarksBucket.grantRead(this.watermarkingLambda);
     commonResource.watermarkedImageBucket.grantWrite(this.watermarkingLambda);
     commonResource.watermarkedImageBucket.grantRead(this.postWatermarkedLambda);
-
+    commonResource.originalImageBucket.grantRead(this.postWatermarkedLambda);
+    commonResource.userinfoBucket.grantRead(this.postWatermarkedLambda);
+    commonResource.userinfoBucket.grantRead(this.delOriginalPostLambda);
+    commonResource.originalImageBucket.grantRead(this.delOriginalPostLambda);
 
     // Step Functionの作成
     this.flow = this.createWorkflow(
@@ -171,6 +174,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
         SECRET_NAME: commonResource.secretManager.secretName,
         WATERMARKED_IMAGE_BUCKET_NAME: commonResource.watermarkedImageBucket.bucketName,
         ORIGINAL_IMAGE_BUCKET_NAME: commonResource.originalImageBucket.bucketName,
+        USERINFO_BUCKET_NAME: commonResource.userinfoBucket.bucketName,
       },
     });
   }
@@ -183,12 +187,14 @@ export class WatermarkingFlowStack extends cdk.Stack {
     return new lambda.DockerImageFunction(this, name.toLowerCase(), {
       functionName: name,
       code,
-      timeout: Duration.seconds(60),
-      memorySize: 128,
+      timeout: Duration.seconds(30),
+      memorySize: 256,
       retryAttempts: 1,
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,
+        USERINFO_BUCKET_NAME: commonResource.userinfoBucket.bucketName,
+        ORIGINAL_IMAGE_BUCKET_NAME: commonResource.originalImageBucket.bucketName,
       },
     });
   }
