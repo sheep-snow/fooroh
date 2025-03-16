@@ -48,5 +48,5 @@ const watermarking = new WatermarkingFlowStack(app, `${appName}-WatermarkingFlow
 const signout = new SignoutFlowStack(app, `${appName}-SignoutFlowStack-${stage}`, common, { env });
 const firehose = new FirehoseStack(app, `${appName}-FirehoseStack-${stage}`, common, { env });
 // Tagging all resources
-cdk.Tags.of(app).add("category", appName);
+cdk.Tags.of(app).add("Application", appName);
 app.synth();

@@ -49,8 +49,8 @@ export class FirehoseStack extends Stack {
 
     const taskName = `${commonResource.appName}-${commonResource.stage}-task`;
     const taskDefinition = new ecs.FargateTaskDefinition(this, taskName, {
-      cpu: 512,
-      memoryLimitMiB: 4096,
+      cpu: 256,
+      memoryLimitMiB: 2048,
       runtimePlatform: {
         cpuArchitecture: ecs.CpuArchitecture.X86_64,
         operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,

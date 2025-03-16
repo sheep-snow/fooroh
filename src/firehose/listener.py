@@ -44,7 +44,7 @@ CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 SERVICE_NAME = os.getenv("SERVICE_NAME")
 
 
-FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 360
+FOLLOWED_LIST_UPDATE_INTERVAL_SECS = 180
 """フォロイーテーブルを更新する間隔"""
 
 
@@ -152,51 +152,56 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
         cursor_value (multiprocessing.Value): value of the cursor
         pool_queue (multiprocessing.Queue): Queue object
     """
-    signal.signal(signal.SIGINT, signal.SIG_IGN)  # we handle it in the main process
-    sqs_client = get_sqs_client()
+    try:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)  # we handle it in the main process
+        sqs_client = get_sqs_client()
 
-    while True:
-        message = pool_queue.get()
+        while True:
+            message = pool_queue.get()
 
-        commit = parse_subscribe_repos_message(message)
-        if not isinstance(commit, models.ComAtprotoSyncSubscribeRepos.Commit):
-            continue
-
-        if commit.seq % 20 == 0:
-            cursor_value.value = commit.seq
-
-        if not commit.blocks:
-            continue
-
-        ops = _get_ops_by_type(commit)
-        for created_post in ops[models.ids.AppBskyFeedPost]["created"]:
-            # https://atproto.blue/en/latest/atproto/atproto_client.models.app.bsky.feed.post.html
-            record = created_post["record"]
-
-            if not _is_follows_post(created_post):
-                # フォロイーの投稿ではない場合はスキップ
+            commit = parse_subscribe_repos_message(message)
+            if not isinstance(commit, models.ComAtprotoSyncSubscribeRepos.Commit):
                 continue
-            if not _is_post_has_image(record):
-                # 画像投稿ではない場合はスキップ
+
+            if commit.seq % 20 == 0:
+                cursor_value.value = commit.seq
+
+            if not commit.blocks:
                 continue
-            msg_body = json.dumps(
-                {
-                    "cid": created_post["cid"],
-                    "uri": created_post["uri"],
-                    "author_did": created_post["author"],
-                    "created_at": record.created_at,
-                }
-            )
-            # ウォーターマーク画像の投稿を検知
-            if _is_set_watermark_img_post(record):
-                logger.info(f"Watermark Set Request Received: `{msg_body}`")
-                sqs_client.send_message(QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg_body)
-                continue
-            # ウォーターマーク拒否ではないコンテンツ画像の投稿を検知
-            if _is_watermarking_skip(record) is False:
-                logger.info(f"Image Post Received: {msg_body}")
-                sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg_body)
-                continue
+
+            ops = _get_ops_by_type(commit)
+            for created_post in ops[models.ids.AppBskyFeedPost]["created"]:
+                # https://atproto.blue/en/latest/atproto/atproto_client.models.app.bsky.feed.post.html
+                record = created_post["record"]
+
+                if not _is_follows_post(created_post):
+                    # フォロイーの投稿ではない場合はスキップ
+                    continue
+                if not _is_post_has_image(record):
+                    # 画像投稿ではない場合はスキップ
+                    continue
+                msg_body = json.dumps(
+                    {
+                        "cid": created_post["cid"],
+                        "uri": created_post["uri"],
+                        "author_did": created_post["author"],
+                        "created_at": record.created_at,
+                    }
+                )
+                # ウォーターマーク画像の投稿を検知
+                if _is_set_watermark_img_post(record):
+                    logger.info(f"Watermark Set Request Received: `{msg_body}`")
+                    sqs_client.send_message(
+                        QueueUrl=SET_WATERMARK_IMG_QUEUE_URL, MessageBody=msg_body
+                    )
+                    continue
+                # ウォーターマーク拒否ではないコンテンツ画像の投稿を検知
+                if _is_watermarking_skip(record) is False:
+                    logger.info(f"Image Post Received: {msg_body}")
+                    sqs_client.send_message(QueueUrl=WATERMARKING_QUEUE_URL, MessageBody=msg_body)
+                    continue
+    except Exception as e:
+        logger.error(f"Worker error: {str(e)}")
 
 
 def get_firehose_params(
@@ -222,8 +227,6 @@ def events_per_interval(func: callable) -> callable:
 
         # Update follows table per interval
         if cur_time - wrapper.start_time >= FOLLOWED_LIST_UPDATE_INTERVAL_SECS:
-            global current_follows
-            global bluesky_client
             current_follows = _get_current_follows(bluesky_client)
             logger.debug(f"Update in memory Follows table, {len(current_follows)} follows.")
             wrapper.start_time = cur_time
@@ -231,6 +234,9 @@ def events_per_interval(func: callable) -> callable:
 
         return func(*args)
 
+    global current_follows
+    global bluesky_client
+    logger.debug("events_per_interval")
     wrapper.calls = 0
     wrapper.start_time = time.time()
 
@@ -299,8 +305,8 @@ def main():
     logger.info("Got current follows successfully.")
 
     logger.info("Starting listener...")
-    logger.info("Press Ctrl+C to stop the listener.")
     signal.signal(signal.SIGINT, signal_handler)
+    logger.info("Press Ctrl+C to stop the listener.")
     start_cursor = None
     params = None
     cursor = multiprocessing.Value("i", 0)
@@ -326,7 +332,8 @@ def main():
 
         queue.put(message)
 
-    client.start(on_message_handler, on_callback_error_handler)
+    client.start(on_message_handler)
+    # client.start(on_message_handler, on_callback_error_handler)
 
 
 if __name__ == "__main__":
