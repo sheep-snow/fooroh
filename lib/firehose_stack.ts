@@ -98,7 +98,7 @@ export class FirehoseStack extends Stack {
         },
       ],
       securityGroups: [sg],
-      desiredCount: 1,
+      desiredCount: 0,  // Set desiredCount to 0 to prevent the service from starting automatically
       assignPublicIp: true,
       enableExecuteCommand: true,
     });

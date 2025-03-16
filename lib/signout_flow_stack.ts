@@ -115,7 +115,8 @@ export class SignoutFlowStack extends Stack {
 
   private createEventbridgeCronRule(): events.Rule {
     return new events.Rule(this, 'FindFollowEventsRule', {
-      schedule: events.Schedule.rate(Duration.minutes(2)),
+      schedule: events.Schedule.rate(Duration.minutes(4)),
+      enabled: false,
     });
   }
 
