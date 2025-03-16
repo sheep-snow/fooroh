@@ -8,9 +8,12 @@ from settings import settings
 logger = get_logger(__name__)
 
 
-msg = """ユーザー登録が終わりました。
-ご利用前に fr というAltをつけてウォーターマーク画像を投稿してください。
-登録は何度でもやり直すことができます。"""
+msg = """Your App Password has been received and your user registration has been completed 🥳.
+
+Next, please submit a watermark image with the Alt of 'fr'.
+If you successfully received the password, this bot will notify you by DM.
+
+You can re-register your watermark image as many times as you like!"""
 
 
 def send_dm(dm, convo_id=None) -> models.ChatBskyConvoDefs.MessageView:

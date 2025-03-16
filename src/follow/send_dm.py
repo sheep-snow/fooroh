@@ -5,7 +5,10 @@ from settings import settings
 
 logger = get_logger(__name__)
 
-msg = """ユーザー登録を開始します。アプリパスワードをこのチャット（DM）に送ってください。"""
+msg = """Thanks for the follow-up 😀.
+Please send your app password to this chat (DM).
+The password you give us will be encrypted and stored securely,
+and will only be used to provide the functionality of this bot."""
 
 
 def handler(event, context):
