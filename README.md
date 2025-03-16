@@ -24,9 +24,7 @@ The application part is a Lambda function or ECS service written in python and d
 
 **1. Create `cdk.env` file and configure as desired.**
 
-Create the cdk.env file.
-By default, the settings for the development environment are enabled,
-but this usually does not need to be changed.
+Create the cdk.env file. By default, the settings for the development environment are enabled, but this usually does not need to be changed.
 
 **2. deploy the bot below operations.**
 
