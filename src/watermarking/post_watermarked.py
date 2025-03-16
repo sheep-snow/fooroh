@@ -28,7 +28,8 @@ def handler(event, context):
         with BytesIO() as img_byte_arr:
             image.save(img_byte_arr, format=image.format)
             images.append(img_byte_arr.getvalue())
-            image_alts.append(prop["alt"])
+            alt = prop.get("alt") if isinstance(prop.get("alt"), str) else ""
+            image_alts.append(f"{alt} {settings.ALT_OF_SKIP_WATERMARKING}")
             prop_height: int = image.height
             prop_width: int = image.width
             image_aspect_ratios.append(

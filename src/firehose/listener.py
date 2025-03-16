@@ -124,18 +124,19 @@ async def _is_follows_post(post, current_follows) -> bool:
 
 
 async def _is_watermarking_skip(record, desired_alt) -> bool:
-    """ウォーターマーク付与を拒否するAltが付与されている事を判定する"""
-    images_alt = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
-    if desired_alt in images_alt:
-        return True
-    else:
-        return False
+    """ウォーターマーク付与を拒否するAltが含まれている事を判定する"""
+    images_alts = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
+    contains = []
+    for alt in images_alts:
+        if isinstance(desired_alt, str):
+            contains.append(desired_alt in alt)
+    return any(contains)
 
 
 async def _is_set_watermark_img_post(record) -> bool:
     """ウォーターマーク画像の投稿であることを判定する"""
-    images_alt = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
-    if settings.ALT_OF_SET_WATERMARK_IMG in images_alt:
+    images_alts = {i.alt for i in record.embed.images if "alt" in i.model_fields_set}
+    if settings.ALT_OF_SET_WATERMARK_IMG in images_alts:
         return True
     else:
         return False
