@@ -47,8 +47,6 @@ def handler(event, context):
     post: models.AppBskyFeedPost.GetRecordResponse = client.get_post(
         post_rkey=rkey, profile_identify=did
     )
-    # いいねを付ける
-    client.like(uri=input.get("uri"), cid=input.get("cid"))
 
     authors_pds_client = _get_authors_pds_client(author_did)
     id_of_did = get_id_of_did(author_did)
@@ -81,9 +79,9 @@ def handler(event, context):
 
 if __name__ == "__main__":
     sample_event = {
-        "cid": "bafyreibulkhj5y5quqf73xlub47u42vs25l5lppqd6k5tknxcphiiywar4",
-        "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lk6w5lem4c2t",
+        "cid": "bafyreic4cvvpkc7k2v4g356byvft6uggsv3exzgoko6ptpk2aaxmx6igfi",
+        "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lkitc6qda22p",
         "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7",
-        "created_at": "2025-03-12T15:40:40.957Z",
+        "created_at": "2025-03-16T14:16:11.638Z",
     }
     handler(sample_event, {})

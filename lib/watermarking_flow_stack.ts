@@ -165,11 +165,12 @@ export class WatermarkingFlowStack extends cdk.Stack {
       code,
       timeout: Duration.seconds(80),
       memorySize: 512,
-      retryAttempts: 0,
+      retryAttempts: 1,
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,
         WATERMARKED_IMAGE_BUCKET_NAME: commonResource.watermarkedImageBucket.bucketName,
+        ORIGINAL_IMAGE_BUCKET_NAME: commonResource.originalImageBucket.bucketName,
       },
     });
   }
@@ -184,7 +185,7 @@ export class WatermarkingFlowStack extends cdk.Stack {
       code,
       timeout: Duration.seconds(60),
       memorySize: 128,
-      retryAttempts: 0,
+      retryAttempts: 1,
       environment: {
         LOG_LEVEL: commonResource.loglevel,
         SECRET_NAME: commonResource.secretManager.secretName,

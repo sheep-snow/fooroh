@@ -15,7 +15,9 @@ logger = get_logger(__name__)
 def handler(event, context):
     logger.info(f"Received event: {event}")
 
-    metadata = get_metadata(settings.ORIGINAL_IMAGE_BUCKET_NAME, event["metadata"])
+    metadata_key = event["metadata"]
+    logger.debug(f"Getting metadata from `{settings.ORIGINAL_IMAGE_BUCKET_NAME}/{metadata_key}`...")
+    metadata = get_metadata(settings.ORIGINAL_IMAGE_BUCKET_NAME, metadata_key)
     metadatas = [i for i in metadata["value"]["embed"]["images"]]
 
     images: List = []
@@ -51,13 +53,13 @@ def handler(event, context):
 
 if __name__ == "__main__":
     data = {
-        "metadata": "bafyreicrzbngyafoii5detj5qdjxjobogle5kqq763swj4rlan2dvjxkum/yzw3jty3wrlfejayynmp6oh7/post.json",
+        "metadata": "bafyreidq2zf4gr3k4sloimtyolubnx5wweleqdr5ed7ctf6zjtpevzzusm/yzw3jty3wrlfejayynmp6oh7/post.json",
         "image_paths": [
-            "bafyreicrzbngyafoii5detj5qdjxjobogle5kqq763swj4rlan2dvjxkum/yzw3jty3wrlfejayynmp6oh7/0.jpg"
+            "bafyreidq2zf4gr3k4sloimtyolubnx5wweleqdr5ed7ctf6zjtpevzzusm/yzw3jty3wrlfejayynmp6oh7/0.jpg"
         ],
-        "post": '{"uri":"at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lkbbgnagi22s","value":{"created_at":"2025-03-13T14:07:55.542Z","text":"","embed":{"images":[{"alt":"","image":{"mime_type":"image/jpeg","size":243366,"ref":{"link":"bafkreifknnz267ikq25n2bclqz3w66c7viugjvqlz6cixowz7su6e57nya"},"py_type":"blob"},"aspect_ratio":{"height":744,"width":572,"py_type":"app.bsky.embed.defs#aspectRatio"},"py_type":"app.bsky.embed.images#image"}],"py_type":"app.bsky.embed.images"},"entities":null,"facets":null,"labels":null,"langs":["ja"],"reply":null,"tags":null,"py_type":"app.bsky.feed.post"},"cid":"bafyreicrzbngyafoii5detj5qdjxjobogle5kqq763swj4rlan2dvjxkum"}',
+        "post": '{"uri":"at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lkitmnuyok2t","value":{"created_at":"2025-03-16T14:22:03.062Z","text":"","embed":{"images":[{"alt":"","image":{"mime_type":"image/jpeg","size":395930,"ref":{"link":"bafkreib72iihfumq2vdnx2wlm6atmop2yzoo4yktu67pxy3yulzky4jply"},"py_type":"blob"},"aspect_ratio":{"height":1022,"width":762,"py_type":"app.bsky.embed.defs#aspectRatio"},"py_type":"app.bsky.embed.images#image"}],"py_type":"app.bsky.embed.images"},"entities":null,"facets":null,"labels":null,"langs":["ja"],"reply":null,"tags":null,"py_type":"app.bsky.feed.post"},"cid":"bafyreidq2zf4gr3k4sloimtyolubnx5wweleqdr5ed7ctf6zjtpevzzusm"}',
         "out_image_paths": [
-            "bafyreicrzbngyafoii5detj5qdjxjobogle5kqq763swj4rlan2dvjxkum/yzw3jty3wrlfejayynmp6oh7/0.png"
+            "bafyreidq2zf4gr3k4sloimtyolubnx5wweleqdr5ed7ctf6zjtpevzzusm/yzw3jty3wrlfejayynmp6oh7/0.png"
         ],
     }
     handler(data, {})
