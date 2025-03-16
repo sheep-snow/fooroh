@@ -35,7 +35,7 @@ export class SignupFlowStack extends Stack {
 
   private createEventbridgeCronRule(): events.Rule {
     return new events.Rule(this, 'SignupExecutionRule', {
-      schedule: events.Schedule.rate(Duration.minutes(4)),
+      schedule: events.Schedule.rate(Duration.minutes(5)),
       enabled: false,
     });
   }
