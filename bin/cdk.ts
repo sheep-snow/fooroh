@@ -12,6 +12,9 @@ import { SignupFlowStack } from '../lib/signup_flow_stack';
 import { WatermarkingFlowStack } from '../lib/watermarking_flow_stack';
 
 dotenv.config({ path: './cdk.env' });
+if (process.env.APP_NAME == undefined || process.env.APP_NAME.length == 0) {
+  throw new Error("Please set valiables to cdk.env file");
+}
 const app = new cdk.App();
 const VALID_STAGES = ["dev", "prod"];
 const stage = app.node.tryGetContext("env");
@@ -44,5 +47,6 @@ const setWatermarkImg = new SetWatermarkImgStack(app, `${appName}-SetWatermarkIm
 const watermarking = new WatermarkingFlowStack(app, `${appName}-WatermarkingFlowStack-${stage}`, common, { env });
 const signout = new SignoutFlowStack(app, `${appName}-SignoutFlowStack-${stage}`, common, { env });
 const firehose = new FirehoseStack(app, `${appName}-FirehoseStack-${stage}`, common, { env });
-
+// Tagging all resources
+cdk.Tags.of(app).add("Application", appName);
 app.synth();

@@ -29,6 +29,8 @@ class Settings:
     WATERMARKS_BUCKET_NAME: str
     WATERMARKED_IMAGE_BUCKET_NAME: str
     SIGNOUT_QUEUE_URL: str
+    ALT_OF_SET_WATERMARK_IMG: str
+    ALT_OF_SKIP_WATERMARKING: str
 
     def __new__(cls, *args, **kargs):
         """Singletonパターン"""
@@ -57,6 +59,9 @@ class Settings:
         self.WATERMARKED_IMAGE_BUCKET_NAME = os.getenv(
             "WATERMARKED_IMAGE_BUCKET_NAME", default=None
         )
+        self.ALT_OF_SET_WATERMARK_IMG = "fr"
+        self.ALT_OF_SKIP_WATERMARKING = "nofr"
+
         print(f"Application Version: {self.SRC_VERSION}")
 
     def _get_src_version(self) -> str:

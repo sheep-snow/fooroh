@@ -1,17 +1,16 @@
 import json
 import mimetypes
 import os
-from io import BytesIO, StringIO
+from io import BytesIO
 from pathlib import PurePosixPath
-from uuid import uuid4
 
 import boto3
 from atproto import Client, IdResolver, models
 
-from firehose.listener import ALT_OF_SET_WATERMARK_IMG
 from lib.aws.s3 import post_bytes_object, post_string_object
 from lib.bs.client import get_client
 from lib.bs.get_bsky_post_by_url import get_did_from_url, get_rkey_from_url
+from lib.common_converter import generate_exec_id, get_id_of_did
 from lib.log import get_logger
 from settings import settings
 
@@ -40,44 +39,44 @@ def handler(event, context):
     author_did = input.get("author_did")
     authors_pds_client = _get_authors_pds_client(author_did)
     for image in post.value.embed.images:
-        if "alt" in image.model_fields_set and ALT_OF_SET_WATERMARK_IMG == image.alt:
+        if "alt" in image.model_fields_set and settings.ALT_OF_SET_WATERMARK_IMG == image.alt:
             blob_cid = image.image.cid.encode()
             blob = authors_pds_client.com.atproto.sync.get_blob(
                 models.ComAtprotoSyncGetBlob.Params(cid=blob_cid, did=author_did)
             )
-            metadata = json.dumps(
-                {
-                    "mime_type": image.image.mime_type,
-                    "size": image.image.size,
-                    "width": image.aspect_ratio.width,
-                    "height": image.aspect_ratio.height,
-                }
-            )
+            metadata = {
+                "did": author_did,
+                "mime_type": image.image.mime_type,
+                "size": image.image.size,
+                "width": image.aspect_ratio.width,
+                "height": image.aspect_ratio.height,
+            }
+            id_of_did = get_id_of_did(author_did)
             # S3に画像とそのmetadataのセットを保存
             with BytesIO(blob) as f:
                 img_object_name = (
                     PurePosixPath("images")
-                    .joinpath(author_did)
-                    .with_suffix(mimetypes.guess_extension(image.image.mime_type).pop())
+                    .joinpath(id_of_did)
+                    .with_suffix(mimetypes.guess_extension(image.image.mime_type))
                 )
                 img_object_name = img_object_name.as_posix()
                 post_bytes_object(settings.WATERMARKS_BUCKET_NAME, img_object_name, f)
                 logger.info(f"Saved watermark image to S3 {img_object_name}")
-            with StringIO(metadata) as f:
-                metadata_obj_name = (
-                    PurePosixPath("metadatas").joinpath(author_did).with_suffix(".json")
-                )
-                metadata_obj_name = metadata_obj_name.as_posix()
-                post_string_object(settings.WATERMARKS_BUCKET_NAME, metadata_obj_name, f)
-                logger.info(f"Saved metadata to S3 {metadata_obj_name}")
+                metadata["path"] = img_object_name
+
+            # メタデータをS3に保存
+            metadata_obj_name = PurePosixPath("metadatas").joinpath(id_of_did).with_suffix(".json")
+            metadata_obj_name = metadata_obj_name.as_posix()
+            post_string_object(
+                settings.WATERMARKS_BUCKET_NAME, metadata_obj_name, json.dumps(metadata)
+            )
+            logger.info(f"Saved metadata to S3 {metadata_obj_name}")
             # 1ポストあたり複数のウォーターマーク画像がある場合、最初に受理したものだけを使ってウォーターマークを設定する
             break
 
-    execution_id = str(uuid4())
-    sfn_client.start_execution(
-        stateMachineArn=sm_arn, name=execution_id, input=json.dumps({"did": author_did})
-    )
-    logger.info(f"Started state machine execution_id=`{execution_id}`")
+    exec_id = generate_exec_id(author_did)
+    sfn_client.start_execution(stateMachineArn=sm_arn, name=exec_id, input=json.dumps(metadata))
+    logger.info(f"Started state machine execution_id=`{exec_id}`")
 
     return {"message": "OK", "status": 200}
 
@@ -86,7 +85,7 @@ if __name__ == "__main__":
     sample_event = {
         "Records": [
             {
-                "body": '{"cid": "bafyreicqafnvvnaum3qxfgpr2gp7k6zf7orwbnekpjnhelsewzxcpr4zda", "uri": "at://did:plc:cdflm6ueigxdhbupuj5tkg2i/app.bsky.feed.post/3liwqdjex322y", "author_did": "did:plc:cdflm6ueigxdhbupuj5tkg2i", "created_at": "2025-02-24T16:10:08.206Z"}'
+                "body": '{"cid": "bafyreid2jqsob2bhfcmjnxmrs5llorv3qwi7vccbgelmeyn5f4ab4k2h5u", "uri": "at://did:plc:yzw3jty3wrlfejayynmp6oh7/app.bsky.feed.post/3lk6vxudv322t", "author_did": "did:plc:yzw3jty3wrlfejayynmp6oh7", "created_at": "2025-03-12T15:37:29.044Z"}'
             }
         ]
     }

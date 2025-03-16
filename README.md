@@ -30,16 +30,16 @@ $ npx cdk bootstrap --profile default
 $ npx cdk synth --profile default -c env=dev --all
 
 # deploy each Stack
-$ npx cdk deploy fooroh-CommonResourceStack-dev -c env=dev
-$ npx cdk deploy fooroh-FollowFlowStack-dev -c env=dev
-$ npx cdk deploy fooroh-SignupFlowStack-dev -c env=dev
-$ npx cdk deploy fooroh-SetWatermarkImgStack-dev -c env=dev
-$ npx cdk deploy fooroh-WatermarkingFlowStack-dev -c env=dev
-$ npx cdk deploy fooroh-SignoutFlowStack-dev -c env=dev
-$ npx cdk deploy fooroh-FirehoseStack-dev -c env=dev
+$ npx cdk deploy fr-CommonResourceStack-dev -c env=dev
+$ npx cdk deploy fr-FollowFlowStack-dev -c env=dev
+$ npx cdk deploy fr-SignupFlowStack-dev -c env=dev
+$ npx cdk deploy fr-SetWatermarkImgStack-dev -c env=dev
+$ npx cdk deploy fr-WatermarkingFlowStack-dev -c env=dev
+$ npx cdk deploy fr-SignoutFlowStack-dev -c env=dev
+$ npx cdk deploy fr-FirehoseStack-dev -c env=dev
 
 # deploy all Stacks at once
-$ npx cdk deploy --profile default -c env=dev --all
+$ npx cdk deploy -c env=dev --all --require-approval never
 ```
 
 ## Design
@@ -58,3 +58,4 @@ $ npx cdk deploy --profile default -c env=dev --all
 
 ### sign out
 ![signout](./docs/signout.drawio.svg)
+

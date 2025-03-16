@@ -8,4 +8,4 @@ def encrypt(message: str) -> str:
 
 
 def decrypt(encrypted: str) -> str:
-    return Fernet(settings.FERNET_KEY).decrypt(encrypted)
+    return Fernet(settings.FERNET_KEY).decrypt(encrypted).decode("utf-8")
